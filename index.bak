@@ -87,7 +87,6 @@
   .p5{background:rgba(25,195,125,.18);color:var(--accent)}
   .p3{background:rgba(59,130,246,.18);color:#7eb0ff}
   .p0{background:rgba(147,160,189,.12);color:var(--muted)}
-  .pneg{background:rgba(239,68,68,.18);color:#ff7b7b}
 
   .lb-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-top:6px}
   .lb-row{display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid var(--line)}
@@ -103,16 +102,15 @@
   .rule:last-child{border-bottom:none}
   .rule .pt{font-weight:800;color:var(--accent)}
 
-  .login{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;gap:16px}
-  .login .formwrap{width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px}
-  .login .logo{width:84px;height:84px;border-radius:24px;background:linear-gradient(135deg,var(--accent),#0f8f5b);
+  .login{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;gap:18px}
+  .login .logo{width:74px;height:74px;border-radius:22px;background:linear-gradient(135deg,var(--accent),#0f8f5b);
     display:grid;place-items:center;font-size:38px;box-shadow:0 12px 40px rgba(25,195,125,.3)}
   .login h1{margin:0;font-size:23px;text-align:center}
   .login p{margin:0;color:var(--muted);text-align:center;font-size:14px;max-width:300px}
-  .login input{width:100%;max-width:340px;padding:15px;font-size:16px;background:var(--card);
-    border:1.5px solid var(--line);border-radius:14px;color:var(--txt);outline:none;text-align:center;transition:border-color .15s}
+  .login input{width:100%;max-width:320px;padding:14px;font-size:16px;background:var(--card);
+    border:1.5px solid var(--line);border-radius:13px;color:var(--txt);outline:none;text-align:center}
   .login input:focus{border-color:var(--accent)}
-  .login .btn{width:100%;max-width:340px;flex:0 0 auto;padding:15px;font-size:16px;border-radius:14px}
+  .login .btn{max-width:320px}
   .hidden{display:none!important}
   .sectitle{font-size:20px;font-weight:800;margin:18px 2px 4px}
   .sectitle + p{margin:0 2px 10px;color:var(--muted);font-size:13px}
@@ -186,11 +184,9 @@ const db = getFirestore(app);
 const CONFIG = {
   // Puanlama (istediğin gibi değiştir)
   points: {
-    exactScore: 20,              // tam skoru bilmek
-    correctPenaltyPerGoal: -2,   // sonucu doğru ama skor yanlış: her gol sapması için
-    drawButWinnerPerGoal: -5,    // maç berabere bitti, sen "biri kazanır" dedin
-    winnerButDrawPerGoal: -7     // maç kazananlı bitti, sen "berabere" dedin
-    // ters takımı galip gösterdin = 0
+    exactScore: 20,           // tam skoru bilmek
+    correctPenaltyPerGoal: -2 // sonucu doğru ama skor yanlış: her gol sapması için
+    // sonucu yanlış bilmek = 0 (negatif yok)
   },
   oddsMultiplier: 3,          // oran bonusu = oran × bu  (sadece sonucu doğru bilene)
   // Sonuç girebilecek yöneticiler (büyük/küçük harf önemsiz)
@@ -242,21 +238,18 @@ function oddsFor(m,oc){ const o=m.odds; return parseFloat(oc>0?o.h : oc<0?o.a : 
 function calcPoints(pred,res,m){
   if(!pred||!res) return null;
   const ro=outcome(res.h,res.a), po=outcome(pred.h,pred.a);
-  const dev=Math.abs(pred.h-res.h)+Math.abs(pred.a-res.a);
   // Tam skor: +20 + oran bonusu
   if(isExact(pred,res)) return CONFIG.points.exactScore + oddsBonus(m,ro);
-  // Sonucu doğru (1/X/2), skor yanlış: -2/sapma + oran bonusu
-  if(po===ro) return CONFIG.points.correctPenaltyPerGoal*dev + oddsBonus(m,ro);
-  // Maç berabere bitti, sen "biri kazanır" dedin: -5/sapma
-  if(ro===0) return CONFIG.points.drawButWinnerPerGoal*dev;
-  // Maç kazananlı bitti, sen "berabere" dedin: -7/sapma
-  if(po===0) return CONFIG.points.winnerButDrawPerGoal*dev;
-  // Ters takımı galip gösterdin: 0
+  // Sonucu doğru (1/X/2) ama skor yanlış: her gol sapması için ceza + oran bonusu (negatife düşmez)
+  if(po===ro){
+    const dev=Math.abs(pred.h-res.h)+Math.abs(pred.a-res.a);
+    return Math.max(0, CONFIG.points.correctPenaltyPerGoal*dev + oddsBonus(m,ro));
+  }
+  // Sonucu yanlış: 0 puan (negatif yok)
   return 0;
 }
-function oddsBonus(m,oc){ return m ? oddsFor(m,oc)*CONFIG.oddsMultiplier : 0; }
-const fmt = n => Math.round(n*100)/100;
-const ptsClass = p => p>=CONFIG.points.exactScore?"p5":p>0?"p3":p<0?"pneg":"p0";
+function oddsBonus(m,oc){ return m ? Math.round(oddsFor(m,oc)*CONFIG.oddsMultiplier) : 0; }
+const ptsClass = p => p>=CONFIG.points.exactScore?"p5":p>0?"p3":"p0";
 
 /* ============================================================
    4) GİRİŞ
@@ -364,7 +357,7 @@ function renderOthers(m){
   Object.keys(predictionsAll).sort().forEach(name=>{
     const p=(predictionsAll[name].preds||{})[m.id]; if(!p) return;
     const pts=calcPoints(p,resultsAll[m.id],m);
-    const badge=pts===null?"":`<span class="pts ${ptsClass(pts)}">${pts>0?'+':''}${fmt(pts)}</span>`;
+    const badge=pts===null?"":`<span class="pts ${ptsClass(pts)}">+${pts}</span>`;
     rows+=`<div class="prow"><div class="who"><div class="ava">${name[0].toUpperCase()}</div>${name===me?"<b>"+name+" (sen)</b>":name}</div>
       <div><span class="sc">${p.h} - ${p.a}</span>${badge}</div></div>`;
   });
@@ -423,7 +416,7 @@ function renderBoard(){
     html+=`<div class="lb-row ${s.name===me?'meRow':''}">
       <div class="rank ${rc}">${medal}</div>
       <div class="lb-name"><div class="ava">${s.name[0].toUpperCase()}</div>${s.name}${s.name===me?" (sen)":""}</div>
-      <div class="lb-pts">${fmt(s.total)} <small>p · ${s.exact} tam</small></div></div>`;
+      <div class="lb-pts">${s.total} <small>p · ${s.exact} tam</small></div></div>`;
   });
   html+=`</div>`;
   $("view-board").innerHTML=html;
@@ -437,28 +430,26 @@ function renderRules(){
   $("view-rules").innerHTML=`
     <div class="sectitle">Puanlama Kuralları</div>
     <div class="card">
-      <div class="rule"><span>🎯 Tam skor</span><span class="pt">+${p.exactScore} + oran×${k}</span></div>
-      <div class="rule"><span>✅ Sonuç doğru, skor yanlış</span><span class="pt">${p.correctPenaltyPerGoal}/sapma + oran×${k}</span></div>
-      <div class="rule"><span>➖ Berabere bitti, "galip" dedin</span><span class="pt">${p.drawButWinnerPerGoal}/sapma</span></div>
-      <div class="rule"><span>➖ Galip çıktı, "berabere" dedin</span><span class="pt">${p.winnerButDrawPerGoal}/sapma</span></div>
-      <div class="rule"><span>❌ Ters takıma "galip" dedin</span><span class="pt">0 puan</span></div>
+      <div class="rule"><span>🎯 Tam skoru bilmek</span><span class="pt">+${p.exactScore} puan</span></div>
+      <div class="rule"><span>✅ Sonucu doğru (1/X/2), skor yanlış</span><span class="pt">${p.correctPenaltyPerGoal} / gol sapması</span></div>
+      <div class="rule"><span>❌ Sonucu yanlış</span><span class="pt">0 puan</span></div>
+      <div class="rule"><span>🎰 Oran bonusu (sonucu bilene)</span><span class="pt">+ oran × ${k}</span></div>
     </div>
     <div class="card" style="margin-top:6px">
       <div style="font-size:13px;color:var(--muted);line-height:1.7">
         • <b>Gol sapması</b> = |tahmin_ev−gerçek_ev| + |tahmin_dep−gerçek_dep|.<br>
-        • <b>Oran bonusu</b> = oran × ${k}, yalnızca sonucu (1/X/2) doğru bilene; sürprizi bilmek çok, favoriyi bilmek az kazandırır.<br>
-        • <b>Ters takıma galip</b> dersen 0; yanlış beraberlik/galibiyet tahmininde <b>eksi</b> puan.<br>
+        • <b>Oran bonusu</b> yalnızca sonucu (1/X/2) doğru bilene verilir; sürprizi bilmek çok, favoriyi bilmek az kazandırır.<br>
+        • Sonucu yanlış bilirsen <b>0</b> alırsın — eksi puan yok.<br>
         • Tahminler maç <b>başlayınca kilitlenir</b> ve herkese görünür.<br>
         • Yönetici sonucu girince <b>puanlar otomatik</b> dağılır.
       </div>
     </div>
     <div class="card" style="margin-top:6px">
       <div style="font-size:12px;color:var(--muted);line-height:1.7">
-        <b>Örnek</b> (maç 1-2, deplasman kazandı, oran 6.00):<br>
+        <b>Örnek</b> (maç 1-2, deplasman sürprizi, oran 6.00):<br>
         • Tam <b>1-2</b> → 20 + 18 = <b style="color:var(--accent)">+38</b><br>
         • <b>0-2</b> (sonuç doğru, sapma 1) → −2 + 18 = <b style="color:var(--accent)">+16</b><br>
-        • <b>1-1</b> (berabere dedin, sapma 1) → <b style="color:#ff7b7b">−7</b><br>
-        • <b>2-1</b> (ters galip dedin) → <b>0</b>
+        • <b>2-1</b> (yanlış sonuç) → <b>0</b>
       </div>
     </div>`;
 }

@@ -212,10 +212,26 @@ const db = getFirestore(app);
 
 /* ===== AYARLAR (puanlama burada) ===== */
 const CONFIG = {
-  points: { exactScore: 20, correctPenaltyPerGoal: -2, drawButWinnerPerGoal: -5, winnerButDrawPerGoal: -7 },
-  // DOĞRU tahminde taban (20 − ceza×sapma) o sonucun ORANIYLA çarpılır
+  // Tur bazlı skor puanı; çıkan puan o sonucun 1/X/2 ORANIYLA çarpılır.
+  rounds: {
+    group: { exact:20, corr:-2, wDraw:-5, wWin:-7, drawBonus:5, winBonus:3, label:"Grup" },
+    r32:   { exact:28, corr:-3, wDraw:-7,  wWin:-10, label:"Son 32" },
+    r16:   { exact:35, corr:-4, wDraw:-10, wWin:-14, label:"Son 16" },
+    qf:    { exact:45, corr:-5, wDraw:-13, wWin:-18, label:"Çeyrek Final" },
+    sf:    { exact:55, corr:-7, wDraw:-15, wWin:-21, label:"Yarı Final" },
+    final: { exact:70, corr:-9, wDraw:-18, wWin:-24, label:"Final" },
+  },
   admins: ["Meriç"],
 };
+function roundOf(dt){
+  const d=new Date(dt);
+  if(d < new Date("2026-06-28T00:00:00Z")) return "group";
+  if(d < new Date("2026-07-04T00:00:00Z")) return "r32";
+  if(d < new Date("2026-07-08T00:00:00Z")) return "r16";
+  if(d < new Date("2026-07-12T00:00:00Z")) return "qf";
+  if(d < new Date("2026-07-17T00:00:00Z")) return "sf";
+  return "final";
+}
 let matches = []; // Firestore "matches" koleksiyonundan doldurulur (api/sync.js yazar)
 
 /* ===== DURUM ===== */
@@ -232,17 +248,21 @@ function statusOf(m){ if(resultsAll[m.id]) return "done"; if(new Date()>=new Dat
 function fmtDate(iso){ const d=new Date(iso); return d.toLocaleDateString("tr-TR",{day:"numeric",month:"long",weekday:"short"})+" · "+d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}); }
 
 function calcPoints(pred,res,m){
-  if(!pred||!res) return null;
+  if(!pred||!res||!m) return null;
+  const R=CONFIG.rounds[roundOf(m.datetime)]||CONFIG.rounds.group;
   const ro=outcome(res.h,res.a), po=outcome(pred.h,pred.a);
   const dev=Math.abs(pred.h-res.h)+Math.abs(pred.a-res.a);
-  const odd=m?oddsFor(m,ro):1;
-  if(isExact(pred,res)) return CONFIG.points.exactScore * odd;
-  if(po===ro) return (CONFIG.points.exactScore + CONFIG.points.correctPenaltyPerGoal*dev) * odd;
-  if(ro===0) return CONFIG.points.drawButWinnerPerGoal*dev;
-  if(po===0) return CONFIG.points.winnerButDrawPerGoal*dev;
-  return 0;
+  const odd=oddsFor(m,ro);                       // gerçekleşen sonucun oranı
+  const bonus=(R.drawBonus!==undefined && po===ro)?(ro===0?R.drawBonus:R.winBonus):0; // grup sonuç bonusu
+  let base;
+  if(isExact(pred,res)) base = R.exact + bonus;
+  else if(po===ro)      base = R.corr*dev + bonus;
+  else if(ro===0)       base = R.wDraw*dev;
+  else if(po===0)       base = R.wWin*dev;
+  else                  base = 0;                // ters galip
+  return base * odd;                             // çıkan puan × oran
 }
-const ptsClass = p => p>=CONFIG.points.exactScore?"p5":p>0?"p3":p<0?"pneg":"p0";
+const ptsClass = p => p>=20?"p5":p>0?"p3":p<0?"pneg":"p0";
 
 /* ===== KAYIT / GİRİŞ ===== */
 async function sha256(s){ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
@@ -308,9 +328,14 @@ function renderAll(){ renderMatches(); renderBoard(); renderRules(); }
 /* ===== MAÇLAR ===== */
 function renderMatches(){
   if($("app").classList.contains("hidden")) return;
-  let html=`<div class="sectitle">Maçlar</div><p>Skor tahminini gir. Maç başlayınca kilitlenir ve herkesin tahmini açılır.</p>`;
-  if(!matches.length){ $("view-matches").innerHTML=html+`<div class="card" style="text-align:center;color:var(--muted)">Maçlar yükleniyor… (yönetici oranları henüz çekmediyse birazdan gelir)</div>`; return; }
-  matches.forEach(m=>{
+  const bugun=new Date();
+  const ayniGun=m=>{const d=new Date(m.datetime);return d.getFullYear()===bugun.getFullYear()&&d.getMonth()===bugun.getMonth()&&d.getDate()===bugun.getDate();};
+  const gunun=matches.filter(ayniGun);
+  const tarihStr=bugun.toLocaleDateString("tr-TR",{day:"numeric",month:"long",weekday:"long"});
+  let html=`<div class="sectitle">Bugünün Maçları</div><p>${tarihStr} · sadece bugünkü maçlar tahmine açık.</p>`;
+  if(!matches.length){ $("view-matches").innerHTML=html+`<div class="card" style="text-align:center;color:var(--muted)">Maçlar yükleniyor…</div>`; return; }
+  if(!gunun.length){ $("view-matches").innerHTML=html+`<div class="card" style="text-align:center;color:var(--muted)">Bugün maç yok. Sıralama ve geçmiş için <b>Lig</b> sekmesine bak.</div>`; return; }
+  gunun.forEach(m=>{
     const st=statusOf(m), mine=myPreds()[m.id], res=resultsAll[m.id];
     const pill = st==="open"?`<span class="status-pill s-open">Açık</span>`: st==="live"?`<span class="status-pill s-live">● Kilitli</span>`:`<span class="status-pill s-done">Bitti</span>`;
     let mid;
@@ -324,7 +349,7 @@ function renderMatches(){
     if(st==="open"){
       action=`<div class="saverow"><button class="btn-grad" data-save="${m.id}">${mine?"Güncelle":"Kaydet"}</button>${mine?`<span class="saved-note">✓ Kayıtlı</span>`:""}</div>`;
     } else { action=renderOthers(m)+adminResultBox(m); }
-    html+=`<div class="card"><div class="mtop"><span class="grp">${m.group}</span>${pill}</div>
+    html+=`<div class="card"><div class="mtop"><span class="grp">${(CONFIG.rounds[roundOf(m.datetime)]||{}).label||m.group}</span>${pill}</div>
       <div class="teams">
         <div class="team"><div class="flag">${m.hf}</div><div class="name">${m.home}</div></div>
         <div class="mid">${mid}</div>
@@ -399,32 +424,33 @@ function renderBoard(){
 
 /* ===== KURALLAR ===== */
 function renderRules(){
-  const p=CONFIG.points;
+  const rows=Object.values(CONFIG.rounds).map(R=>`<div class="rule"><span>${R.label}</span><span class="pt">tam ${R.exact} · doğru ${R.corr}/sapma</span></div>`).join("");
   $("view-rules").innerHTML=`
     <div class="sectitle">Puanlama Kuralları</div>
     <div class="card">
-      <div class="rule"><span>🎯 Tam skor</span><span class="pt">${p.exactScore} × oran</span></div>
-      <div class="rule"><span>✅ Sonuç doğru, skor yanlış</span><span class="pt">(${p.exactScore}${p.correctPenaltyPerGoal}×sapma) × oran</span></div>
-      <div class="rule"><span>➖ Berabere bitti, "galip" dedin</span><span class="pt">${p.drawButWinnerPerGoal}/sapma</span></div>
-      <div class="rule"><span>➖ Galip çıktı, "berabere" dedin</span><span class="pt">${p.winnerButDrawPerGoal}/sapma</span></div>
-      <div class="rule"><span>❌ Ters takıma "galip" dedin</span><span class="pt">0 puan</span></div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:6px">Her turun taban puanı farklı. <b>Çıkan skor puanı, o maçın gerçekleşen sonucunun oranıyla çarpılır.</b></div>
+      ${rows}
     </div>
     <div class="card">
       <div style="font-size:13px;color:var(--muted);line-height:1.8">
-        • <b>Gol sapması</b> = |tahmin_ev−gerçek_ev| + |tahmin_dep−gerçek_dep|.<br>
-        • Doğru tahminde önce taban puan (20'den sapma düşülür), sonra <b>o sonucun oranıyla çarpılır</b> — sürprizi bilmek katlanır.<br>
-        • <b>Ters takıma galip</b> dersen 0; yanlış beraberlik/galibiyet tahmininde <b>eksi</b> puan.<br>
-        • Tahminler maç <b>başlayınca kilitlenir</b> ve herkese görünür.
+        • <b>Tam skor</b> → o turun tam puanı. <b>Doğru sonuç</b> (skor yanlış) → her gol sapması için ceza.<br>
+        • <b>Yanlış sonuç</b>: berabere bitti "galip" dedin / galip çıktı "berabere" dedin → daha büyük ceza. Ters takıma "galip" → 0.<br>
+        • Gruba özel: doğru sonucu bilene +5 (berabere) / +3 (galip) bonus.<br>
+        • <b>Sapma</b> = |tahmin_ev−gerçek_ev| + |tahmin_dep−gerçek_dep|.<br>
+        • Tüm bu puan <b>× oran</b> ile çarpılır — sürprizi bilmek katlanır, yanlış sürpriz çok kaybettirir.<br>
+        • Her gün sadece o günün maçları tahmine açık; maç başlayınca kilitlenir.
       </div>
     </div>
     <div class="card">
       <div style="font-size:12px;color:var(--muted);line-height:1.8">
-        <b>Örnek</b> (maç 0-2, deplasman kazandı, oran 6.00):<br>
-        • Tam <b>0-2</b> → 20 × 6.00 = <b style="color:var(--g1)">120</b><br>
-        • <b>0-1</b> (doğru, sapma 1) → 18 × 6.00 = <b style="color:var(--g1)">108</b><br>
-        • <b>1-1</b> (berabere dedin, sapma 2) → <b style="color:#ff8a8a">−14</b><br>
-        • <b>2-0</b> (ters galip) → <b>0</b>
+        <b>Örnek</b> grup maçı, deplasman kazandı 0-2 (oran 6.00):<br>
+        • Tam <b>0-2</b> → (20+3) × 6.00 = <b style="color:var(--g1)">138</b><br>
+        • <b>0-1</b> (doğru, sapma 1) → (−2+3) × 6.00 = <b style="color:var(--g1)">6</b><br>
+        • <b>2-0</b> (ters galip) → 0
       </div>
+    </div>
+    <div class="card" style="border-color:rgba(245,197,24,.3)">
+      <div style="font-size:12px;color:var(--gold);line-height:1.7">⏳ Yakında: grup sıralama tahmini ve knockout tur/şampiyon bonusları.</div>
     </div>`;
 }
 

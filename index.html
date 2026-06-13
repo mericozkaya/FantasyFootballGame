@@ -157,6 +157,12 @@
   .grank.gempty{background:var(--card2);color:transparent}
   .gactual{font-size:14px;font-weight:900;color:var(--muted);min-width:27px;text-align:center} .gactual.gok{color:var(--g1)}
   .gclear{background:none;border:1px solid var(--line);color:var(--muted);border-radius:12px;padding:11px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+  /* BRACKET / KUPA */
+  .cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin-bottom:4px}
+  .cteam{display:flex;align-items:center;gap:7px;padding:9px 10px;border:1px solid var(--line);border-radius:11px;background:var(--bg1);font-size:12px;font-weight:700}
+  .cteam.ctap{cursor:pointer} .cteam.ctap:active{transform:scale(.98)}
+  .cteam.csel{border-color:var(--g1);background:rgba(0,224,138,.15)}
+  .cteam.cwin{border-color:var(--gold);background:rgba(245,197,24,.16)}
 </style>
 </head>
 <body>
@@ -192,6 +198,7 @@
   <div class="wrap">
     <div id="view-matches"></div>
     <div id="view-groups" class="hidden"></div>
+    <div id="view-bracket" class="hidden"></div>
     <div id="view-board" class="hidden"></div>
     <div id="view-rules" class="hidden"></div>
   </div>
@@ -202,6 +209,8 @@
       <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>Gruplar</button>
     <button class="tab" data-v="board">
       <svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M5 4h14v5a7 7 0 01-14 0z"/><path d="M5 6H3v2a3 3 0 003 3M19 6h2v2a3 3 0 01-3 3"/></svg>Lig</button>
+    <button class="tab" data-v="bracket">
+      <svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 01-10 0z"/><path d="M7 6H4v2a3 3 0 003 3M17 6h3v2a3 3 0 01-3 3"/></svg>Kupa</button>
     <button class="tab" data-v="rules">
       <svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/></svg>Kurallar</button>
   </div></nav>
@@ -235,6 +244,8 @@ const CONFIG = {
     sf:    { exact:55, corr:-7, wDraw:-15, wWin:-21, label:"Yarı Final" },
     final: { exact:70, corr:-9, wDraw:-18, wWin:-24, label:"Final" },
   },
+  championPts: 30,                       // şampiyonu bilene
+  advancePts: { r32:8, r16:10, qf:15, sf:20 }, // tur atlayanı bilme (bracket, Son 32'de açılır)
   admins: ["Meriç"],
 };
 function roundOf(dt){
@@ -328,6 +339,7 @@ function subscribe(){
   onSnapshot(collection(db,"matches"), s=>{ matches = s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>new Date(x.datetime)-new Date(y.datetime)); renderMatches(); renderBoard(); }, e=>console.error(e));
   onSnapshot(collection(db,"grouppreds"), s=>{ groupPredsAll={}; s.forEach(d=>groupPredsAll[d.id]=d.data()); renderGroups(); renderBoard(); }, e=>console.error(e));
   onSnapshot(collection(db,"standings"), s=>{ standingsAll={}; s.forEach(d=>standingsAll[d.id]=d.data()); renderGroups(); renderBoard(); }, e=>console.error(e));
+  onSnapshot(collection(db,"meta"), s=>{ metaAll={}; s.forEach(d=>metaAll[d.id]=d.data()); renderBracket(); renderBoard(); }, e=>console.error(e));
 }
 function setSync(ok){ const s=$("sync"); s.classList.toggle("off",!ok); s.innerHTML=`<span class="dot"></span> ${ok?"canlı · senkron":"bağlantı yok"}`; }
 
@@ -335,11 +347,11 @@ function setSync(ok){ const s=$("sync"); s.classList.toggle("off",!ok); s.innerH
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>showTab(t.dataset.v));
 function showTab(v){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.v===v));
-  ["matches","groups","board","rules"].forEach(x=>$("view-"+x).classList.toggle("hidden",x!==v));
-  if(v==="board") renderBoard(); if(v==="groups") renderGroups();
+  ["matches","groups","bracket","board","rules"].forEach(x=>$("view-"+x).classList.toggle("hidden",x!==v));
+  if(v==="board") renderBoard(); if(v==="groups") renderGroups(); if(v==="bracket") renderBracket();
   window.scrollTo(0,0);
 }
-function renderAll(){ renderMatches(); renderGroups(); renderBoard(); renderRules(); }
+function renderAll(){ renderMatches(); renderGroups(); renderBracket(); renderBoard(); renderRules(); }
 
 /* ===== MAÇLAR ===== */
 function renderMatches(){
@@ -444,7 +456,7 @@ function renderBoard(){
     const preds=(predictionsAll[name]&&predictionsAll[name].preds)||{};
     let total=0,exact=0;
     matches.forEach(m=>{ if(!resultsAll[m.id]) return; const pts=calcPoints(preds[m.id],resultsAll[m.id],m); if(pts!=null){ total+=pts; if(isExact(preds[m.id],resultsAll[m.id])) exact++; } });
-    total += groupPointsFor(name);
+    total += groupPointsFor(name) + championPointsFor(name);
     return {name,total:fmt(total),exact};
   }).sort((x,y)=>y.total-x.total||y.exact-x.exact);
 
@@ -590,6 +602,51 @@ function renderGroups(){
   document.querySelectorAll("[data-ag]").forEach(el=>el.onclick=()=>tapAdmin(el.dataset.ag,el.dataset.at));
   document.querySelectorAll("[data-asave]").forEach(b=>b.onclick=()=>saveStandings(b.dataset.asave));
   document.querySelectorAll("[data-aclear]").forEach(b=>b.onclick=()=>{ adminStand[b.dataset.aclear]=[]; renderGroups(); });
+}
+
+/* ===== KUPA / ŞAMPİYON + bracket iskeleti ===== */
+let champPick=null, adminCh=null, metaAll={};
+function championPointsFor(name){
+  const ac=metaAll.tournament&&metaAll.tournament.champion; if(!ac) return 0;
+  const pc=groupPredsAll[name]&&groupPredsAll[name].champion;
+  return pc===ac?CONFIG.championPts:0;
+}
+async function saveChampion(){
+  const c=champPick||(groupPredsAll[me]&&groupPredsAll[me].champion);
+  if(!c){ toast("Bir takım seç"); return; }
+  try{ await setDoc(doc(db,"grouppreds",me),{name:me,champion:c},{merge:true}); toast("Şampiyon kaydedildi ✓"); }catch(e){ toast("Kaydedilemedi"); console.error(e); }
+}
+async function saveChampionResult(){
+  if(!adminCh){ toast("Seç"); return; }
+  try{ await setDoc(doc(db,"meta","tournament"),{champion:adminCh},{merge:true}); toast("Şampiyon sonucu kaydedildi ✓"); }catch(e){ toast("Kaydedilemedi"); console.error(e); }
+}
+function renderBracket(){
+  if($("app").classList.contains("hidden")) return;
+  const open = new Date() < GROUP_DEADLINE;
+  const myCh = champPick || (groupPredsAll[me]&&groupPredsAll[me].champion) || null;
+  const actualCh = (metaAll.tournament&&metaAll.tournament.champion) || null;
+  const all=[]; for(const G in GROUPS) GROUPS[G].forEach(t=>all.push(t));
+  const son = GROUP_DEADLINE.toLocaleDateString("tr-TR",{day:"numeric",month:"long"});
+  let html=`<div class="sectitle">Şampiyon Tahmini</div><p>${open?`Kupayı kim kaldırır? Bir takım seç — doğru bilene <b>+${CONFIG.championPts}</b>. Son tarih: ${son}.`:"Şampiyon tahmini kilitlendi."}</p>`;
+  html+=`<div class="cgrid">`;
+  all.forEach(t=>{
+    const sel=myCh===t.n, win=actualCh&&actualCh===t.n;
+    html+=`<div class="cteam ${sel?'csel':''} ${win?'cwin':''} ${open?'ctap':''}" ${open?`data-ch="${t.n}"`:""}><span class="gflag">${t.f}</span><span>${t.n}</span></div>`;
+  });
+  html+=`</div>`;
+  if(open) html+=`<div class="saverow"><button class="btn-grad" data-chsave ${myCh?"":"disabled"}>Şampiyonu Kaydet</button></div>`;
+  if(actualCh) html+=`<div class="card" style="text-align:center;margin-top:12px">🏆 Şampiyon: <b>${actualCh}</b> · ${myCh===actualCh?`<span style="color:var(--g1);font-weight:800">bildin +${CONFIG.championPts}</span>`:"bilemedin"}</div>`;
+  if(isAdmin()){
+    html+=`<div class="sectitle" style="font-size:18px">🛠️ Yönetici — Şampiyon</div><p>Turnuva bitince gerçek şampiyonu seç.</p><div class="cgrid">`;
+    all.forEach(t=>{ const sel=(adminCh||actualCh)===t.n; html+=`<div class="cteam ${sel?'csel':''} ctap" data-ach="${t.n}"><span class="gflag">${t.f}</span><span>${t.n}</span></div>`; });
+    html+=`</div><div class="saverow"><button class="btn-grad" data-achsave style="background:linear-gradient(135deg,var(--blue),#7b6bff);color:#fff" ${(adminCh||actualCh)?"":"disabled"}>Sonucu Kaydet</button></div>`;
+  }
+  html+=`<div class="card" style="border-color:rgba(245,197,24,.3);margin-top:14px"><div style="color:var(--gold);font-size:13px;line-height:1.7">⏳ <b>Tur tahminleri (kim tur atlar)</b> — Son 32 eşleşmeleri belli olunca (grup bitince) burada açılacak. Her turda ilerleyeni seçeceksin; tutturduğun her takım için puan (Son 32 +${CONFIG.advancePts.r32}, Son 16 +${CONFIG.advancePts.r16}, Çeyrek +${CONFIG.advancePts.qf}, Yarı +${CONFIG.advancePts.sf}).</div></div>`;
+  $("view-bracket").innerHTML=html;
+  document.querySelectorAll("[data-ch]").forEach(el=>el.onclick=()=>{ champPick=el.dataset.ch; renderBracket(); });
+  const cs=document.querySelector("[data-chsave]"); if(cs) cs.onclick=saveChampion;
+  document.querySelectorAll("[data-ach]").forEach(el=>el.onclick=()=>{ adminCh=el.dataset.ach; renderBracket(); });
+  const as=document.querySelector("[data-achsave]"); if(as) as.onclick=saveChampionResult;
 }
 
 /* ===== TOAST + BAŞLAT ===== */

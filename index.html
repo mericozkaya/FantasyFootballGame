@@ -328,12 +328,10 @@ function renderAll(){ renderMatches(); renderBoard(); renderRules(); }
 /* ===== MAÇLAR ===== */
 function renderMatches(){
   if($("app").classList.contains("hidden")) return;
-  const TZ="America/New_York"; // Dünya Kupası ABD'de — gün ABD (Doğu) saatine göre
-  const dayKey=d=>new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
-  const today=dayKey(new Date());
-  const gunun=matches.filter(m=>dayKey(new Date(m.datetime))===today);
-  const gelecek=matches.filter(m=>dayKey(new Date(m.datetime))>today);
-  const tarihStr=new Intl.DateTimeFormat("tr-TR",{timeZone:TZ,day:"numeric",month:"long",weekday:"long"}).format(new Date())+" (ABD günü)";
+  const now=Date.now(), WIN=36*60*60*1000, ko=m=>new Date(m.datetime).getTime();
+  const acik    = matches.filter(m=>statusOf(m)==="open" && ko(m)<=now+WIN);
+  const sonraki = matches.filter(m=>statusOf(m)==="open" && ko(m)> now+WIN);
+  const oynanan = matches.filter(m=>statusOf(m)!=="open" && ko(m)> now-48*60*60*1000).sort((a,b)=>ko(b)-ko(a));
 
   const fullCard=m=>{
     const st=statusOf(m), mine=myPreds()[m.id], res=resultsAll[m.id];
@@ -376,14 +374,18 @@ function renderMatches(){
       </div>
       <div class="lock-note">🔒 Günü gelince tahmine açılır</div></div>`;
 
-  let html=`<div class="sectitle">Bugünün Maçları</div><p>${tarihStr}${gunun.length?" · tahmine açık":""}</p>`;
+  let html=`<div class="sectitle">Tahmine Açık</div><p>Maçtan 36 saat önce açılır · başlayınca kilitlenir.</p>`;
   if(!matches.length){ $("view-matches").innerHTML=html+`<div class="card" style="text-align:center;color:var(--muted)">Maçlar yükleniyor…</div>`; return; }
-  html += gunun.length ? gunun.map(fullCard).join("")
-        : `<div class="card" style="text-align:center;color:var(--muted)">Bugün maç yok — aşağıda sıradaki maçlar var.</div>`;
-  if(gelecek.length){
-    html += `<div class="sectitle" style="font-size:18px">Sonraki Maçlar</div><p>Önizleme · günü gelince tahmine açılır.</p>`;
-    html += gelecek.slice(0,20).map(previewCard).join("");
-    if(gelecek.length>20) html += `<div style="text-align:center;color:var(--muted);font-size:12px;padding:8px">…ve ${gelecek.length-20} maç daha</div>`;
+  html += acik.length ? acik.map(fullCard).join("")
+        : `<div class="card" style="text-align:center;color:var(--muted)">Şu an tahmine açık maç yok — sıradakiler aşağıda.</div>`;
+  if(oynanan.length){
+    html += `<div class="sectitle" style="font-size:18px">Canlı & Biten</div>`;
+    html += oynanan.map(fullCard).join("");
+  }
+  if(sonraki.length){
+    html += `<div class="sectitle" style="font-size:18px">Sonraki Maçlar</div><p>Önizleme · maçtan 36 saat önce açılır.</p>`;
+    html += sonraki.slice(0,20).map(previewCard).join("");
+    if(sonraki.length>20) html += `<div style="text-align:center;color:var(--muted);font-size:12px;padding:8px">…ve ${sonraki.length-20} maç daha</div>`;
   }
   $("view-matches").innerHTML=html;
   document.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>save(b.dataset.save));
@@ -460,7 +462,7 @@ function renderRules(){
         • Gruba özel: doğru sonucu bilene +5 (berabere) / +3 (galip) bonus.<br>
         • <b>Sapma</b> = |tahmin_ev−gerçek_ev| + |tahmin_dep−gerçek_dep|.<br>
         • Tüm bu puan <b>× oran</b> ile çarpılır — sürprizi bilmek katlanır, yanlış sürpriz çok kaybettirir.<br>
-        • Her gün sadece o günün maçları tahmine açık; maç başlayınca kilitlenir.
+        • Her maç başlamasından <b>36 saat önce</b> tahmine açılır; başlayınca kilitlenir.
       </div>
     </div>
     <div class="card">

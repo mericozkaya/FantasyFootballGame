@@ -328,14 +328,14 @@ function renderAll(){ renderMatches(); renderBoard(); renderRules(); }
 /* ===== MAÇLAR ===== */
 function renderMatches(){
   if($("app").classList.contains("hidden")) return;
-  const bugun=new Date();
-  const ayniGun=m=>{const d=new Date(m.datetime);return d.getFullYear()===bugun.getFullYear()&&d.getMonth()===bugun.getMonth()&&d.getDate()===bugun.getDate();};
-  const gunun=matches.filter(ayniGun);
-  const tarihStr=bugun.toLocaleDateString("tr-TR",{day:"numeric",month:"long",weekday:"long"});
-  let html=`<div class="sectitle">Bugünün Maçları</div><p>${tarihStr} · sadece bugünkü maçlar tahmine açık.</p>`;
-  if(!matches.length){ $("view-matches").innerHTML=html+`<div class="card" style="text-align:center;color:var(--muted)">Maçlar yükleniyor…</div>`; return; }
-  if(!gunun.length){ $("view-matches").innerHTML=html+`<div class="card" style="text-align:center;color:var(--muted)">Bugün maç yok. Sıralama ve geçmiş için <b>Lig</b> sekmesine bak.</div>`; return; }
-  gunun.forEach(m=>{
+  const TZ="America/New_York"; // Dünya Kupası ABD'de — gün ABD (Doğu) saatine göre
+  const dayKey=d=>new Intl.DateTimeFormat("en-CA",{timeZone:TZ,year:"numeric",month:"2-digit",day:"2-digit"}).format(d);
+  const today=dayKey(new Date());
+  const gunun=matches.filter(m=>dayKey(new Date(m.datetime))===today);
+  const gelecek=matches.filter(m=>dayKey(new Date(m.datetime))>today);
+  const tarihStr=new Intl.DateTimeFormat("tr-TR",{timeZone:TZ,day:"numeric",month:"long",weekday:"long"}).format(new Date())+" (ABD günü)";
+
+  const fullCard=m=>{
     const st=statusOf(m), mine=myPreds()[m.id], res=resultsAll[m.id];
     const pill = st==="open"?`<span class="status-pill s-open">Açık</span>`: st==="live"?`<span class="status-pill s-live">● Kilitli</span>`:`<span class="status-pill s-done">Bitti</span>`;
     let mid;
@@ -349,7 +349,7 @@ function renderMatches(){
     if(st==="open"){
       action=`<div class="saverow"><button class="btn-grad" data-save="${m.id}">${mine?"Güncelle":"Kaydet"}</button>${mine?`<span class="saved-note">✓ Kayıtlı</span>`:""}</div>`;
     } else { action=renderOthers(m)+adminResultBox(m); }
-    html+=`<div class="card"><div class="mtop"><span class="grp">${(CONFIG.rounds[roundOf(m.datetime)]||{}).label||m.group}</span>${pill}</div>
+    return `<div class="card"><div class="mtop"><span class="grp">${(CONFIG.rounds[roundOf(m.datetime)]||{}).label||m.group}</span>${pill}</div>
       <div class="teams">
         <div class="team"><div class="flag">${m.hf}</div><div class="name">${m.home}</div></div>
         <div class="mid">${mid}</div>
@@ -362,7 +362,29 @@ function renderMatches(){
       </div>
       ${st==="open"?`<div class="lock-note">🔒 ${fmtDate(m.datetime)} — başlayınca kilitlenir</div>`:""}
       ${action}</div>`;
-  });
+  };
+  const previewCard=m=>`<div class="card" style="opacity:.85"><div class="mtop"><span class="grp">${(CONFIG.rounds[roundOf(m.datetime)]||{}).label||m.group}</span><span class="when" style="font-size:11px;color:var(--muted)">${fmtDate(m.datetime)}</span></div>
+      <div class="teams">
+        <div class="team"><div class="flag">${m.hf}</div><div class="name">${m.home}</div></div>
+        <div class="mid"><div style="font-size:18px;font-weight:900;color:var(--muted)">vs</div></div>
+        <div class="team"><div class="flag">${m.af}</div><div class="name">${m.away}</div></div>
+      </div>
+      <div class="odds">
+        <div class="odd"><div class="lab">1</div><div class="val">${(m.odds||{}).h||'-'}</div></div>
+        <div class="odd"><div class="lab">X</div><div class="val">${(m.odds||{}).d||'-'}</div></div>
+        <div class="odd"><div class="lab">2</div><div class="val">${(m.odds||{}).a||'-'}</div></div>
+      </div>
+      <div class="lock-note">🔒 Günü gelince tahmine açılır</div></div>`;
+
+  let html=`<div class="sectitle">Bugünün Maçları</div><p>${tarihStr}${gunun.length?" · tahmine açık":""}</p>`;
+  if(!matches.length){ $("view-matches").innerHTML=html+`<div class="card" style="text-align:center;color:var(--muted)">Maçlar yükleniyor…</div>`; return; }
+  html += gunun.length ? gunun.map(fullCard).join("")
+        : `<div class="card" style="text-align:center;color:var(--muted)">Bugün maç yok — aşağıda sıradaki maçlar var.</div>`;
+  if(gelecek.length){
+    html += `<div class="sectitle" style="font-size:18px">Sonraki Maçlar</div><p>Önizleme · günü gelince tahmine açılır.</p>`;
+    html += gelecek.slice(0,20).map(previewCard).join("");
+    if(gelecek.length>20) html += `<div style="text-align:center;color:var(--muted);font-size:12px;padding:8px">…ve ${gelecek.length-20} maç daha</div>`;
+  }
   $("view-matches").innerHTML=html;
   document.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>save(b.dataset.save));
   document.querySelectorAll("[data-result]").forEach(b=>b.onclick=()=>saveResult(b.dataset.result));

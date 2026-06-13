@@ -163,6 +163,18 @@
   .cteam.ctap{cursor:pointer} .cteam.ctap:active{transform:scale(.98)}
   .cteam.csel{border-color:var(--g1);background:rgba(0,224,138,.15)}
   .cteam.cwin{border-color:var(--gold);background:rgba(245,197,24,.16)}
+  /* BRACKET GÖRSELİ */
+  .bwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0 10px;margin-top:6px}
+  .bracket{display:flex;gap:14px;min-width:max-content}
+  .bcol{flex:0 0 auto;width:150px;display:flex;flex-direction:column;justify-content:space-around;gap:10px}
+  .bcol h4{font-size:11px;font-weight:800;color:var(--muted);text-align:center;margin:0 0 4px;text-transform:uppercase;letter-spacing:.6px;position:sticky;top:0}
+  .bmatch{background:var(--bg1);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .bslot{display:flex;align-items:center;gap:7px;padding:8px 9px;font-size:12px;font-weight:700;color:var(--muted);min-height:34px}
+  .bslot + .bslot{border-top:1px solid var(--line)}
+  .bslot .bf{width:18px;text-align:center;font-size:14px}
+  .bnum{font-size:9px;color:var(--muted);padding:3px 7px;background:var(--card2);display:inline-block;border-radius:0 0 6px 0}
+  .lockbar{display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(245,197,24,.12);border:1px solid rgba(245,197,24,.3);color:var(--gold);font-size:13px;font-weight:700;padding:11px;border-radius:13px;margin-bottom:10px}
+  .bwrap.locked{opacity:.45;filter:grayscale(.4);pointer-events:none}
 </style>
 </head>
 <body>
@@ -641,7 +653,17 @@ function renderBracket(){
     all.forEach(t=>{ const sel=(adminCh||actualCh)===t.n; html+=`<div class="cteam ${sel?'csel':''} ctap" data-ach="${t.n}"><span class="gflag">${t.f}</span><span>${t.n}</span></div>`; });
     html+=`</div><div class="saverow"><button class="btn-grad" data-achsave style="background:linear-gradient(135deg,var(--blue),#7b6bff);color:#fff" ${(adminCh||actualCh)?"":"disabled"}>Sonucu Kaydet</button></div>`;
   }
-  html+=`<div class="card" style="border-color:rgba(245,197,24,.3);margin-top:14px"><div style="color:var(--gold);font-size:13px;line-height:1.7">⏳ <b>Tur tahminleri (kim tur atlar)</b> — Son 32 eşleşmeleri belli olunca (grup bitince) burada açılacak. Her turda ilerleyeni seçeceksin; tutturduğun her takım için puan (Son 32 +${CONFIG.advancePts.r32}, Son 16 +${CONFIG.advancePts.r16}, Çeyrek +${CONFIG.advancePts.qf}, Yarı +${CONFIG.advancePts.sf}).</div></div>`;
+  html+=`<div class="sectitle" style="font-size:18px">Tur Tahmini (Bracket)</div>`;
+  html+=`<div class="lockbar">🔒 Şimdilik kilitli — Son 32 başlayınca açılır</div>`;
+  html+=`<p style="margin-top:0">Eşleşmeler grup bitince gerçek takımlarla gelecek. Tutturduğun her tur: Son 32 +${CONFIG.advancePts.r32}, Son 16 +${CONFIG.advancePts.r16}, Çeyrek +${CONFIG.advancePts.qf}, Yarı +${CONFIG.advancePts.sf}.</p>`;
+  const rounds=[["Son 32",16],["Son 16",8],["Çeyrek",4],["Yarı",2],["Final",1],["3.lük",1]];
+  html+=`<div class="bwrap locked"><div class="bracket">`;
+  rounds.forEach(([lbl,cnt])=>{
+    html+=`<div class="bcol"><h4>${lbl}</h4>`;
+    for(let i=0;i<cnt;i++) html+=`<div class="bmatch"><div class="bslot"><span class="bf">—</span><span>—</span></div><div class="bslot"><span class="bf">—</span><span>—</span></div></div>`;
+    html+=`</div>`;
+  });
+  html+=`</div></div>`;
   $("view-bracket").innerHTML=html;
   document.querySelectorAll("[data-ch]").forEach(el=>el.onclick=()=>{ champPick=el.dataset.ch; renderBracket(); });
   const cs=document.querySelector("[data-chsave]"); if(cs) cs.onclick=saveChampion;

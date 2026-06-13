@@ -146,6 +146,17 @@
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;background:linear-gradient(135deg,var(--g1),var(--g2));
     color:#04261b;padding:11px 20px;border-radius:30px;font-weight:800;font-size:13px;z-index:50;opacity:0;transition:.3s;pointer-events:none}
   .toast.show{opacity:1;bottom:96px}
+
+  /* GRUPLAR */
+  .ghead{font-weight:800;font-size:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+  .gdone{font-size:10px;color:var(--g1);background:rgba(0,224,138,.15);padding:3px 8px;border-radius:20px;font-weight:700}
+  .grow{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--line);border-radius:12px;margin-bottom:7px;background:var(--bg1)}
+  .grow.gtap{cursor:pointer} .grow.gtap:active{transform:scale(.99)}
+  .gflag{font-size:22px;line-height:1} .gname{flex:1;font-size:13px;font-weight:700}
+  .grank{width:27px;height:27px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));color:#04261b;display:grid;place-items:center;font-size:13px;font-weight:900}
+  .grank.gempty{background:var(--card2);color:transparent}
+  .gactual{font-size:14px;font-weight:900;color:var(--muted);min-width:27px;text-align:center} .gactual.gok{color:var(--g1)}
+  .gclear{background:none;border:1px solid var(--line);color:var(--muted);border-radius:12px;padding:11px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
 </style>
 </head>
 <body>
@@ -180,12 +191,15 @@
   </header>
   <div class="wrap">
     <div id="view-matches"></div>
+    <div id="view-groups" class="hidden"></div>
     <div id="view-board" class="hidden"></div>
     <div id="view-rules" class="hidden"></div>
   </div>
   <nav class="tabs"><div class="inner">
     <button class="tab active" data-v="matches">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Maçlar</button>
+    <button class="tab" data-v="groups">
+      <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>Gruplar</button>
     <button class="tab" data-v="board">
       <svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M5 4h14v5a7 7 0 01-14 0z"/><path d="M5 6H3v2a3 3 0 003 3M19 6h2v2a3 3 0 01-3 3"/></svg>Lig</button>
     <button class="tab" data-v="rules">
@@ -312,6 +326,8 @@ function subscribe(){
   onSnapshot(collection(db,"results"), s=>{ resultsAll={}; s.forEach(d=>resultsAll[d.id]=d.data()); renderMatches(); renderBoard(); }, e=>console.error(e));
   onSnapshot(collection(db,"users"), s=>{ usersAll={}; s.forEach(d=>usersAll[d.id]=d.data()); renderBoard(); }, e=>console.error(e));
   onSnapshot(collection(db,"matches"), s=>{ matches = s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>new Date(x.datetime)-new Date(y.datetime)); renderMatches(); renderBoard(); }, e=>console.error(e));
+  onSnapshot(collection(db,"grouppreds"), s=>{ groupPredsAll={}; s.forEach(d=>groupPredsAll[d.id]=d.data()); renderGroups(); renderBoard(); }, e=>console.error(e));
+  onSnapshot(collection(db,"standings"), s=>{ standingsAll={}; s.forEach(d=>standingsAll[d.id]=d.data()); renderGroups(); renderBoard(); }, e=>console.error(e));
 }
 function setSync(ok){ const s=$("sync"); s.classList.toggle("off",!ok); s.innerHTML=`<span class="dot"></span> ${ok?"canlı · senkron":"bağlantı yok"}`; }
 
@@ -319,11 +335,11 @@ function setSync(ok){ const s=$("sync"); s.classList.toggle("off",!ok); s.innerH
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>showTab(t.dataset.v));
 function showTab(v){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.v===v));
-  ["matches","board","rules"].forEach(x=>$("view-"+x).classList.toggle("hidden",x!==v));
-  if(v==="board") renderBoard();
+  ["matches","groups","board","rules"].forEach(x=>$("view-"+x).classList.toggle("hidden",x!==v));
+  if(v==="board") renderBoard(); if(v==="groups") renderGroups();
   window.scrollTo(0,0);
 }
-function renderAll(){ renderMatches(); renderBoard(); renderRules(); }
+function renderAll(){ renderMatches(); renderGroups(); renderBoard(); renderRules(); }
 
 /* ===== MAÇLAR ===== */
 function renderMatches(){
@@ -428,6 +444,7 @@ function renderBoard(){
     const preds=(predictionsAll[name]&&predictionsAll[name].preds)||{};
     let total=0,exact=0;
     matches.forEach(m=>{ if(!resultsAll[m.id]) return; const pts=calcPoints(preds[m.id],resultsAll[m.id],m); if(pts!=null){ total+=pts; if(isExact(preds[m.id],resultsAll[m.id])) exact++; } });
+    total += groupPointsFor(name);
     return {name,total:fmt(total),exact};
   }).sort((x,y)=>y.total-x.total||y.exact-x.exact);
 
@@ -476,6 +493,103 @@ function renderRules(){
     <div class="card" style="border-color:rgba(245,197,24,.3)">
       <div style="font-size:12px;color:var(--gold);line-height:1.7">⏳ Yakında: grup sıralama tahmini ve knockout tur/şampiyon bonusları.</div>
     </div>`;
+}
+
+/* ===== GRUPLAR (sıralama tahmini) ===== */
+const GROUPS = {
+  A:[{n:"Meksika",f:"🇲🇽"},{n:"Güney Afrika",f:"🇿🇦"},{n:"Güney Kore",f:"🇰🇷"},{n:"Çekya",f:"🇨🇿"}],
+  B:[{n:"Kanada",f:"🇨🇦"},{n:"Bosna Hersek",f:"🇧🇦"},{n:"Katar",f:"🇶🇦"},{n:"İsviçre",f:"🇨🇭"}],
+  C:[{n:"Brezilya",f:"🇧🇷"},{n:"Fas",f:"🇲🇦"},{n:"Haiti",f:"🇭🇹"},{n:"İskoçya",f:"🏴󠁧󠁢󠁳󠁣󠁴󠁿"}],
+  D:[{n:"ABD",f:"🇺🇸"},{n:"Paraguay",f:"🇵🇾"},{n:"Avustralya",f:"🇦🇺"},{n:"Türkiye",f:"🇹🇷"}],
+  E:[{n:"Almanya",f:"🇩🇪"},{n:"Curaçao",f:"🇨🇼"},{n:"Fildişi Sahili",f:"🇨🇮"},{n:"Ekvador",f:"🇪🇨"}],
+  F:[{n:"Hollanda",f:"🇳🇱"},{n:"Japonya",f:"🇯🇵"},{n:"İsveç",f:"🇸🇪"},{n:"Tunus",f:"🇹🇳"}],
+  G:[{n:"Belçika",f:"🇧🇪"},{n:"Mısır",f:"🇪🇬"},{n:"İran",f:"🇮🇷"},{n:"Yeni Zelanda",f:"🇳🇿"}],
+  H:[{n:"İspanya",f:"🇪🇸"},{n:"Cabo Verde",f:"🇨🇻"},{n:"Suudi Arabistan",f:"🇸🇦"},{n:"Uruguay",f:"🇺🇾"}],
+  I:[{n:"Fransa",f:"🇫🇷"},{n:"Senegal",f:"🇸🇳"},{n:"Irak",f:"🇮🇶"},{n:"Norveç",f:"🇳🇴"}],
+  J:[{n:"Arjantin",f:"🇦🇷"},{n:"Cezayir",f:"🇩🇿"},{n:"Avusturya",f:"🇦🇹"},{n:"Ürdün",f:"🇯🇴"}],
+  K:[{n:"Portekiz",f:"🇵🇹"},{n:"DR Kongo",f:"🇨🇩"},{n:"Özbekistan",f:"🇺🇿"},{n:"Kolombiya",f:"🇨🇴"}],
+  L:[{n:"İngiltere",f:"🏴󠁧󠁢󠁥󠁮󠁧󠁿"},{n:"Hırvatistan",f:"🇭🇷"},{n:"Gana",f:"🇬🇭"},{n:"Panama",f:"🇵🇦"}],
+};
+const GROUP_DEADLINE = new Date("2026-06-27T00:00:00Z"); // grup sıralama tahmini bu ana kadar açık
+const groupRankPts = c => c>=4?20 : c===2?8 : c===1?3 : 0; // 3 imkansız
+
+let groupPredsAll={}, standingsAll={};
+let myGroupPicks={}, adminStand={};
+const myGP = () => (groupPredsAll[me] && groupPredsAll[me].picks) || {};
+function correctCount(pred,actual){ if(!pred||!actual) return 0; let c=0; for(let i=0;i<4;i++) if(pred[i]&&pred[i]===actual[i]) c++; return c; }
+function groupPointsFor(name){
+  const picks=(groupPredsAll[name]&&groupPredsAll[name].picks)||{}; let t=0;
+  for(const G in GROUPS){ const act=standingsAll[G]&&standingsAll[G].order; if(act) t+=groupRankPts(correctCount(picks[G],act)); }
+  return t;
+}
+function tapTeam(G,t){
+  if(new Date()>=GROUP_DEADLINE) return;
+  const cur = myGroupPicks[G] ? [...myGroupPicks[G]] : (myGP()[G]?[...myGP()[G]]:[]);
+  const i=cur.indexOf(t); if(i>=0) cur.splice(i,1); else if(cur.length<4) cur.push(t);
+  myGroupPicks[G]=cur; renderGroups();
+}
+function tapAdmin(G,t){
+  const cur = adminStand[G] ? [...adminStand[G]] : ((standingsAll[G]&&standingsAll[G].order)?[...standingsAll[G].order]:[]);
+  const i=cur.indexOf(t); if(i>=0) cur.splice(i,1); else if(cur.length<4) cur.push(t);
+  adminStand[G]=cur; renderGroups();
+}
+async function saveGroup(G){
+  const picks = myGroupPicks[G] || myGP()[G];
+  if(!picks||picks.length!==4){ toast("Önce 4 takımı sırala"); return; }
+  const all={...myGP(), [G]:picks};
+  try{ await setDoc(doc(db,"grouppreds",me),{name:me,picks:all},{merge:true}); toast(G+" grubu kaydedildi ✓"); }catch(e){ toast("Kaydedilemedi"); console.error(e); }
+}
+async function saveStandings(G){
+  const ord = adminStand[G] || (standingsAll[G]&&standingsAll[G].order);
+  if(!ord||ord.length!==4){ toast("4 takımı sırala"); return; }
+  try{ await setDoc(doc(db,"standings",G),{order:ord}); toast(G+" sonucu kaydedildi ✓"); }catch(e){ toast("Kaydedilemedi"); console.error(e); }
+}
+function renderGroups(){
+  if($("app").classList.contains("hidden")) return;
+  const open = new Date() < GROUP_DEADLINE;
+  const saved = myGP();
+  const son = GROUP_DEADLINE.toLocaleDateString("tr-TR",{day:"numeric",month:"long"});
+  let html=`<div class="sectitle">Grup Sıralaması</div><p>${open?`Her grubu sırayla dokunarak 1→4 diz. Son tarih: ${son}.`:"Tahminler kilitlendi."}</p>`;
+  for(const G in GROUPS){
+    const picks = myGroupPicks[G] || saved[G] || [];
+    const act = standingsAll[G] && standingsAll[G].order;
+    const cc = act ? correctCount(saved[G], act) : null;
+    html += `<div class="card"><div class="ghead"><span>${G} Grubu</span>${act?`<span class="gdone">✓ ${cc} doğru · +${groupRankPts(cc)}</span>`:""}</div>`;
+    GROUPS[G].forEach(t=>{
+      const rank = picks.indexOf(t.n);
+      const badge = rank>=0 ? `<span class="grank">${rank+1}</span>` : `<span class="grank gempty">0</span>`;
+      let right;
+      if(act){ const ar=act.indexOf(t.n)+1; const ok=rank>=0&&(rank+1)===ar; right=`<span class="gactual ${ok?'gok':''}">${ar}.</span>`; }
+      else right=badge;
+      html += `<div class="grow ${open?'gtap':''}" ${open?`data-g="${G}" data-t="${t.n}"`:""}><span class="gflag">${t.f}</span><span class="gname">${t.n}</span>${right}</div>`;
+    });
+    if(open){
+      const full=(myGroupPicks[G]||saved[G]||[]).length===4;
+      html += `<div class="saverow"><button class="btn-grad" data-gsave="${G}" ${full?"":"disabled"}>${saved[G]?"Güncelle":"Kaydet"}</button><button class="gclear" data-gclear="${G}">Temizle</button></div>`;
+    }
+    html += `</div>`;
+  }
+  if(isAdmin()){
+    html += `<div class="sectitle" style="font-size:18px">🛠️ Yönetici — Grup Sonuçları</div><p>Grup bitince gerçek 1→4 sırasını gir; puanlar otomatik dağılır.</p>`;
+    for(const G in GROUPS){
+      const cur = adminStand[G] || (standingsAll[G]&&standingsAll[G].order) || [];
+      html += `<div class="card" style="border-color:rgba(74,168,255,.3)"><div class="ghead"><span>${G} Grubu</span></div>`;
+      GROUPS[G].forEach(t=>{
+        const r=cur.indexOf(t.n);
+        const badge=r>=0?`<span class="grank" style="background:linear-gradient(135deg,var(--blue),#7b6bff);color:#fff">${r+1}</span>`:`<span class="grank gempty">0</span>`;
+        html += `<div class="grow gtap" data-ag="${G}" data-at="${t.n}"><span class="gflag">${t.f}</span><span class="gname">${t.n}</span>${badge}</div>`;
+      });
+      const full=cur.length===4;
+      html += `<div class="saverow"><button class="btn-grad" data-asave="${G}" ${full?"":"disabled"} style="background:linear-gradient(135deg,var(--blue),#7b6bff);color:#fff">Sonucu Kaydet</button><button class="gclear" data-aclear="${G}">Temizle</button></div></div>`;
+    }
+  }
+  $("view-groups").innerHTML=html;
+  document.querySelectorAll("[data-g]").forEach(el=>el.onclick=()=>tapTeam(el.dataset.g,el.dataset.t));
+  document.querySelectorAll("[data-gsave]").forEach(b=>b.onclick=()=>saveGroup(b.dataset.gsave));
+  document.querySelectorAll("[data-gclear]").forEach(b=>b.onclick=()=>{ myGroupPicks[b.dataset.gclear]=[]; renderGroups(); });
+  document.querySelectorAll("[data-ag]").forEach(el=>el.onclick=()=>tapAdmin(el.dataset.ag,el.dataset.at));
+  document.querySelectorAll("[data-asave]").forEach(b=>b.onclick=()=>saveStandings(b.dataset.asave));
+  document.querySelectorAll("[data-aclear]").forEach(b=>b.onclick=()=>{ adminStand[b.dataset.aclear]=[]; renderGroups(); });
 }
 
 /* ===== TOAST + BAŞLAT ===== */

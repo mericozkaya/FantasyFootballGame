@@ -3,172 +3,202 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Dünya Kupası Tahmin Ligi</title>
+<title>Dünya Kupası 2026 — Tahmin Ligi</title>
 <style>
   :root{
-    --bg:#0b1220; --card:#141d33; --card2:#1b2742; --line:#27324f;
-    --txt:#eaf0fb; --muted:#93a0bd; --accent:#19c37d; --accent2:#3b82f6;
-    --gold:#f5c518; --red:#ef4444; --radius:16px;
+    --bg1:#070b18; --bg2:#0c1330;
+    --card:#141c3a; --card2:#1c2750; --line:#2b3666;
+    --txt:#eef2ff; --muted:#94a1cc;
+    --g1:#00e08a; --g2:#13b9e8; --gold:#ffd60a; --pink:#ff5d8f; --red:#ff5b5b; --blue:#4aa8ff;
+    --rad:20px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    background:linear-gradient(180deg,#0b1220,#0e1729);color:var(--txt);min-height:100vh}
-  .wrap{max-width:560px;margin:0 auto;padding:0 14px 90px}
-  header{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);
-    background:rgba(11,18,32,.85);border-bottom:1px solid var(--line);padding:14px 14px 12px}
-  .hwrap{max-width:560px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .brand{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;letter-spacing:.2px}
-  .brand .ball{width:26px;height:26px;background:var(--accent);border-radius:50%;display:grid;place-items:center;font-size:15px}
-  .me{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
-  .me b{color:var(--txt)}
-  .logout{background:none;border:1px solid var(--line);color:var(--muted);padding:5px 9px;border-radius:9px;font-size:12px;cursor:pointer}
-  .sync{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--accent);margin-top:8px}
-  .sync .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 0 rgba(25,195,125,.6);animation:pulse 2s infinite}
-  .sync.off{color:var(--muted)} .sync.off .dot{background:var(--muted);animation:none}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(25,195,125,.5)}70%{box-shadow:0 0 0 6px rgba(25,195,125,0)}100%{box-shadow:0 0 0 0 rgba(25,195,125,0)}}
-
-  .tabs{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(13,21,38,.95);
-    backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex}
-  .tabs .inner{max-width:560px;margin:0 auto;display:flex;width:100%}
-  .tab{flex:1;background:none;border:none;color:var(--muted);padding:11px 0 14px;font-size:11px;
-    display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-family:inherit}
-  .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9}
-  .tab.active{color:var(--accent)}
-
-  .day{margin:18px 2px 8px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px}
-  .mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-  .grp{font-size:11px;color:var(--muted);background:var(--card2);padding:3px 8px;border-radius:7px}
-  .status-pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
-  .s-open{background:rgba(25,195,125,.15);color:var(--accent)}
-  .s-live{background:rgba(239,68,68,.18);color:#ff7b7b}
-  .s-done{background:rgba(147,160,189,.15);color:var(--muted)}
-
-  .teams{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  .team{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
-  .team .flag{font-size:34px;line-height:1}
-  .team .name{font-size:13px;font-weight:600}
-  .mid{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:96px}
-  .pred-inputs{display:flex;align-items:center;gap:6px}
-  .pred-inputs input{width:42px;height:46px;text-align:center;font-size:20px;font-weight:800;
-    background:var(--card2);border:1.5px solid var(--line);border-radius:11px;color:var(--txt);outline:none}
-  .pred-inputs input:focus{border-color:var(--accent)}
-  .pred-inputs span{font-size:18px;color:var(--muted);font-weight:700}
-  .finalscore{font-size:24px;font-weight:800;letter-spacing:1px}
-  .finalscore small{font-size:11px;color:var(--muted);display:block;font-weight:600;letter-spacing:0}
-
-  .odds{display:flex;gap:6px;margin-top:13px}
-  .odd{flex:1;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:7px 4px;text-align:center}
-  .odd .lab{font-size:10px;color:var(--muted)}
-  .odd .val{font-size:13px;font-weight:700;margin-top:2px}
-
-  .saverow{display:flex;gap:8px;margin-top:12px;align-items:center}
-  .btn{background:var(--accent);color:#06231a;border:none;border-radius:11px;padding:11px 16px;
-    font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;flex:1}
-  .btn:active{transform:scale(.98)} .btn:disabled{opacity:.5}
-  .btn.sec{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
-  .saved-note{font-size:12px;color:var(--accent);display:flex;align-items:center;gap:5px;white-space:nowrap}
-  .lock-note{font-size:12px;color:var(--muted);margin-top:11px;display:flex;align-items:center;gap:6px}
-
-  .admin-box{margin-top:12px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:11px;padding:11px}
-  .admin-box .lab{font-size:11px;color:#7eb0ff;font-weight:700;margin-bottom:8px}
-  .admin-row{display:flex;align-items:center;gap:8px}
-  .admin-row input{width:46px;height:40px;text-align:center;font-size:17px;font-weight:800;background:var(--card2);border:1.5px solid var(--line);border-radius:9px;color:var(--txt);outline:none}
-  .admin-row .btn{padding:9px 12px;font-size:13px;background:var(--accent2);color:#fff}
-
-  .others{margin-top:13px;border-top:1px solid var(--line);padding-top:11px}
-  .others h4{margin:0 0 9px;font-size:12px;color:var(--muted);font-weight:700;display:flex;justify-content:space-between}
-  .prow{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--line)}
-  .prow:last-child{border-bottom:none}
-  .prow .who{display:flex;align-items:center;gap:8px}
-  .ava{width:24px;height:24px;border-radius:50%;background:var(--accent2);display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff}
-  .prow .sc{font-weight:700}
-  .pts{font-size:11px;font-weight:800;padding:2px 8px;border-radius:20px;margin-left:8px}
-  .p5{background:rgba(25,195,125,.18);color:var(--accent)}
-  .p3{background:rgba(59,130,246,.18);color:#7eb0ff}
-  .p0{background:rgba(147,160,189,.12);color:var(--muted)}
-  .pneg{background:rgba(239,68,68,.18);color:#ff7b7b}
-
-  .lb-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-top:6px}
-  .lb-row{display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid var(--line)}
-  .lb-row:last-child{border-bottom:none}
-  .lb-row.meRow{background:rgba(25,195,125,.07)}
-  .rank{width:26px;text-align:center;font-weight:800;font-size:15px;color:var(--muted)}
-  .rank.r1{color:var(--gold)} .rank.r2{color:#cbd5e1} .rank.r3{color:#cd7f32}
-  .lb-name{flex:1;font-weight:600;display:flex;align-items:center;gap:9px}
-  .lb-pts{font-weight:800;font-size:16px}
-  .lb-pts small{font-size:11px;color:var(--muted);font-weight:600}
-
-  .rule{display:flex;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--line)}
-  .rule:last-child{border-bottom:none}
-  .rule .pt{font-weight:800;color:var(--accent)}
-
-  .login{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;gap:16px}
-  .login .formwrap{width:100%;max-width:340px;display:flex;flex-direction:column;gap:14px}
-  .login .logo{width:84px;height:84px;border-radius:24px;background:linear-gradient(135deg,var(--accent),#0f8f5b);
-    display:grid;place-items:center;font-size:38px;box-shadow:0 12px 40px rgba(25,195,125,.3)}
-  .login h1{margin:0;font-size:23px;text-align:center}
-  .login p{margin:0;color:var(--muted);text-align:center;font-size:14px;max-width:300px}
-  .login input{width:100%;max-width:340px;padding:15px;font-size:16px;background:var(--card);
-    border:1.5px solid var(--line);border-radius:14px;color:var(--txt);outline:none;text-align:center;transition:border-color .15s}
-  .login input:focus{border-color:var(--accent)}
-  .login .btn{width:100%;max-width:340px;flex:0 0 auto;padding:15px;font-size:16px;border-radius:14px}
+    color:var(--txt);min-height:100vh;
+    background:radial-gradient(1200px 600px at 50% -10%,rgba(0,224,138,.10),transparent 60%),
+               radial-gradient(900px 500px at 90% 0%,rgba(19,185,232,.10),transparent 55%),
+               linear-gradient(180deg,var(--bg1),var(--bg2))}
+  .grad-txt{background:linear-gradient(135deg,var(--g1),var(--g2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .btn-grad{background:linear-gradient(135deg,var(--g1),var(--g2));color:#04261b;border:none;border-radius:14px;
+    padding:15px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;width:100%;letter-spacing:.2px;
+    box-shadow:0 10px 30px rgba(0,224,138,.25);transition:transform .1s}
+  .btn-grad:active{transform:scale(.98)} .btn-grad:disabled{opacity:.55;box-shadow:none}
   .hidden{display:none!important}
-  .sectitle{font-size:20px;font-weight:800;margin:18px 2px 4px}
-  .sectitle + p{margin:0 2px 10px;color:var(--muted);font-size:13px}
-  .toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:var(--accent);color:#06231a;
-    padding:10px 18px;border-radius:30px;font-weight:700;font-size:13px;z-index:50;opacity:0;transition:.3s;pointer-events:none}
-  .toast.show{opacity:1;bottom:88px}
+
+  /* AUTH */
+  .auth{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:26px;gap:22px}
+  .auth-hero{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .trophy{width:96px;height:96px;border-radius:30px;display:grid;place-items:center;font-size:46px;
+    background:linear-gradient(135deg,var(--g1),var(--g2));box-shadow:0 18px 50px rgba(0,224,138,.35)}
+  .auth-hero h1{margin:8px 0 0;font-size:26px;font-weight:900;text-align:center;letter-spacing:.3px}
+  .auth-hero .subtitle{font-size:15px;color:var(--muted);font-weight:600;letter-spacing:3px;text-transform:uppercase}
+  .auth-card{width:100%;max-width:360px;background:rgba(20,28,58,.7);backdrop-filter:blur(12px);
+    border:1px solid var(--line);border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:13px}
+  .seg{display:flex;background:var(--bg1);border:1px solid var(--line);border-radius:13px;padding:4px;gap:4px}
+  .seg-btn{flex:1;background:none;border:none;color:var(--muted);padding:10px;border-radius:9px;font-size:14px;
+    font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+  .seg-btn.active{background:linear-gradient(135deg,var(--g1),var(--g2));color:#04261b}
+  .auth-card input{width:100%;padding:15px;font-size:16px;background:var(--bg1);border:1.5px solid var(--line);
+    border-radius:13px;color:var(--txt);outline:none;transition:border-color .15s}
+  .auth-card input:focus{border-color:var(--g1)}
+  .auth-err{font-size:13px;color:var(--red);text-align:center;min-height:16px;font-weight:600}
+  .auth-foot{font-size:12px;color:var(--muted);text-align:center;margin-top:2px}
+
+  /* HEADER */
+  header{position:sticky;top:0;z-index:20;backdrop-filter:blur(14px);
+    background:rgba(7,11,24,.82);border-bottom:1px solid var(--line);padding:13px 14px}
+  .hwrap{max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .brand{display:flex;align-items:center;gap:9px;font-weight:900;font-size:16px}
+  .brand .ball{width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,var(--g1),var(--g2));
+    display:grid;place-items:center;font-size:16px}
+  .me{display:flex;align-items:center;gap:9px}
+  .me .ava{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--pink),#b34bff);
+    display:grid;place-items:center;font-size:14px;font-weight:800;color:#fff}
+  .logout{background:none;border:1px solid var(--line);color:var(--muted);padding:6px 10px;border-radius:10px;
+    font-size:12px;cursor:pointer;font-family:inherit}
+  .sync{max-width:600px;margin:8px auto 0;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--g1)}
+  .sync .dot{width:7px;height:7px;border-radius:50%;background:var(--g1);animation:pulse 2s infinite}
+  .sync.off{color:var(--muted)} .sync.off .dot{background:var(--muted);animation:none}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(0,224,138,.5)}70%{box-shadow:0 0 0 7px rgba(0,224,138,0)}100%{box-shadow:0 0 0 0 rgba(0,224,138,0)}}
+
+  .wrap{max-width:600px;margin:0 auto;padding:0 14px 96px}
+  .sectitle{font-size:22px;font-weight:900;margin:20px 2px 4px}
+  .sectitle + p{margin:0 2px 14px;color:var(--muted);font-size:13px}
+
+  /* MATCH CARD */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);padding:15px;margin-bottom:13px}
+  .mtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+  .grp{font-size:11px;color:var(--muted);background:var(--card2);padding:4px 9px;border-radius:8px;font-weight:700}
+  .status-pill{font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px}
+  .s-open{background:rgba(0,224,138,.16);color:var(--g1)} .s-live{background:rgba(255,91,91,.18);color:#ff8a8a}
+  .s-done{background:rgba(148,161,204,.16);color:var(--muted)}
+  .teams{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .team{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;text-align:center}
+  .team .flag{font-size:40px;line-height:1;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
+  .team .name{font-size:13px;font-weight:700}
+  .mid{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:104px}
+  .pred-inputs{display:flex;align-items:center;gap:7px}
+  .pred-inputs input{width:46px;height:52px;text-align:center;font-size:23px;font-weight:900;
+    background:var(--bg1);border:2px solid var(--line);border-radius:13px;color:var(--txt);outline:none}
+  .pred-inputs input:focus{border-color:var(--g1)}
+  .pred-inputs span{font-size:20px;color:var(--muted);font-weight:800}
+  .finalscore{font-size:28px;font-weight:900;letter-spacing:1px}
+  .finalscore small{font-size:11px;color:var(--muted);display:block;font-weight:700;letter-spacing:0;margin-top:2px}
+  .odds{display:flex;gap:7px;margin-top:15px}
+  .odd{flex:1;background:var(--bg1);border:1px solid var(--line);border-radius:11px;padding:8px 4px;text-align:center}
+  .odd .lab{font-size:10px;color:var(--muted);font-weight:600}
+  .odd .val{font-size:14px;font-weight:800;margin-top:3px}
+  .saverow{display:flex;gap:9px;margin-top:14px;align-items:center}
+  .saved-note{font-size:12px;color:var(--g1);font-weight:700;white-space:nowrap}
+  .lock-note{font-size:12px;color:var(--muted);margin-top:12px;display:flex;align-items:center;gap:6px}
+
+  .admin-box{margin-top:13px;background:rgba(74,168,255,.08);border:1px solid rgba(74,168,255,.3);border-radius:13px;padding:12px}
+  .admin-box .lab{font-size:11px;color:var(--blue);font-weight:800;margin-bottom:9px}
+  .admin-row{display:flex;align-items:center;gap:9px}
+  .admin-row input{width:48px;height:42px;text-align:center;font-size:18px;font-weight:900;background:var(--bg1);
+    border:2px solid var(--line);border-radius:11px;color:var(--txt);outline:none}
+  .admin-row button{background:var(--blue);color:#03203f;border:none;border-radius:11px;padding:11px 14px;
+    font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+
+  .others{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+  .others h4{margin:0 0 10px;font-size:12px;color:var(--muted);font-weight:800;display:flex;justify-content:space-between}
+  .prow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:13px;border-bottom:1px dashed var(--line)}
+  .prow:last-child{border-bottom:none}
+  .prow .who{display:flex;align-items:center;gap:9px}
+  .ava-s{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--blue),#7b6bff);
+    display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff}
+  .prow .sc{font-weight:800}
+  .pts{font-size:11px;font-weight:900;padding:3px 9px;border-radius:20px;margin-left:9px}
+  .p5{background:rgba(0,224,138,.2);color:var(--g1)} .p3{background:rgba(74,168,255,.2);color:var(--blue)}
+  .p0{background:rgba(148,161,204,.14);color:var(--muted)} .pneg{background:rgba(255,91,91,.2);color:#ff8a8a}
+
+  /* LIG / PODIUM */
+  .podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;margin:8px 0 18px}
+  .pod{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:7px}
+  .pod .pava{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:20px;font-weight:900;color:#04261b}
+  .pod .pn{font-size:13px;font-weight:800;text-align:center}
+  .pod .pp{font-size:12px;color:var(--muted);font-weight:700}
+  .pod .bar{width:100%;border-radius:12px 12px 0 0;display:grid;place-items:start center;padding-top:8px;font-size:18px;font-weight:900;color:rgba(0,0,0,.45)}
+  .pod1 .pava{background:linear-gradient(135deg,#ffe066,var(--gold))} .pod1 .bar{height:92px;background:linear-gradient(180deg,var(--gold),#caa800)}
+  .pod2 .pava{background:linear-gradient(135deg,#eef2ff,#aebbd6);color:#1a2236} .pod2 .bar{height:66px;background:linear-gradient(180deg,#cfd7ea,#8e9bbd)}
+  .pod3 .pava{background:linear-gradient(135deg,#f0a979,#cd7f32)} .pod3 .bar{height:50px;background:linear-gradient(180deg,#d98b4f,#a5662a)}
+  .lb-card{background:var(--card);border:1px solid var(--line);border-radius:var(--rad);overflow:hidden}
+  .lb-row{display:flex;align-items:center;gap:13px;padding:14px;border-bottom:1px solid var(--line)}
+  .lb-row:last-child{border-bottom:none}
+  .lb-row.meRow{background:rgba(0,224,138,.08)}
+  .rank{width:24px;text-align:center;font-weight:900;font-size:15px;color:var(--muted)}
+  .lb-name{flex:1;font-weight:700;display:flex;align-items:center;gap:10px}
+  .lb-pts{font-weight:900;font-size:17px}
+  .lb-pts small{font-size:11px;color:var(--muted);font-weight:700}
+
+  .rule{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--line);gap:12px}
+  .rule:last-child{border-bottom:none}
+  .rule .pt{font-weight:900;color:var(--g1);white-space:nowrap;font-size:13px}
+
+  /* TABS */
+  .tabs{position:fixed;bottom:0;left:0;right:0;z-index:30;background:rgba(7,11,24,.94);
+    backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex}
+  .tabs .inner{max-width:600px;margin:0 auto;display:flex;width:100%}
+  .tab{flex:1;background:none;border:none;color:var(--muted);padding:11px 0 15px;font-size:11px;font-weight:700;
+    display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;font-family:inherit}
+  .tab svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.9}
+  .tab.active{color:var(--g1)}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:84px;background:linear-gradient(135deg,var(--g1),var(--g2));
+    color:#04261b;padding:11px 20px;border-radius:30px;font-weight:800;font-size:13px;z-index:50;opacity:0;transition:.3s;pointer-events:none}
+  .toast.show{opacity:1;bottom:96px}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login" class="login">
-  <div class="logo">🏆</div>
-  <h1>Dünya Kupası<br>Tahmin Ligi</h1>
-  <p>Adını gir, maçları tahmin et, arkadaşlarınla yarış.</p>
-  <input id="nameInput" placeholder="Adın (örn. Meriç)" autocomplete="off">
-  <button class="btn" id="loginBtn">Giriş Yap</button>
+<div id="auth" class="auth">
+  <div class="auth-hero">
+    <div class="trophy">🏆</div>
+    <h1>Dünya Kupası 2026</h1>
+    <div class="subtitle">Tahmin Ligi</div>
+  </div>
+  <div class="auth-card">
+    <div class="seg">
+      <button class="seg-btn active" data-mode="login">Giriş Yap</button>
+      <button class="seg-btn" data-mode="register">Kayıt Ol</button>
+    </div>
+    <input id="authName" placeholder="Adın" autocomplete="off" maxlength="20">
+    <input id="authPass" type="password" placeholder="Şifre" autocomplete="off">
+    <button class="btn-grad" id="authBtn">Giriş Yap</button>
+    <div class="auth-err" id="authErr"></div>
+    <div class="auth-foot">15 kişilik arkadaş ligi · tek havuz</div>
+  </div>
 </div>
 
-<!-- APP -->
 <div id="app" class="hidden">
   <header>
     <div class="hwrap">
       <div class="brand"><span class="ball">⚽</span> DK Tahmin Ligi</div>
-      <div class="me"><span>Merhaba, <b id="meName"></b></span>
+      <div class="me"><span class="ava" id="meAva"></span>
         <button class="logout" id="logoutBtn">Çıkış</button></div>
     </div>
-    <div class="hwrap"><span class="sync off" id="sync"><span class="dot"></span> bağlanıyor…</span></div>
+    <div class="sync off" id="sync"><span class="dot"></span> bağlanıyor…</div>
   </header>
-
   <div class="wrap">
     <div id="view-matches"></div>
     <div id="view-board" class="hidden"></div>
     <div id="view-rules" class="hidden"></div>
   </div>
-
   <nav class="tabs"><div class="inner">
     <button class="tab active" data-v="matches">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Maçlar</button>
     <button class="tab" data-v="board">
-      <svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M5 4h14v5a7 7 0 01-14 0z"/><path d="M5 6H3v2a3 3 0 003 3M19 6h2v2a3 3 0 01-3 3"/></svg>Sıralama</button>
+      <svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M5 4h14v5a7 7 0 01-14 0z"/><path d="M5 6H3v2a3 3 0 003 3M19 6h2v2a3 3 0 01-3 3"/></svg>Lig</button>
     <button class="tab" data-v="rules">
       <svg viewBox="0 0 24 24"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h9"/></svg>Kurallar</button>
   </div></nav>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, onSnapshot }
+import { getFirestore, collection, doc, getDoc, setDoc, onSnapshot }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* ============================================================
-   1) FIREBASE
-   ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyAbeNEfOCgwBHqzXEXat6szSxF-o5doYN0",
   authDomain: "fantasyfootbalgame.firebaseapp.com",
@@ -180,126 +210,92 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ============================================================
-   2) AYARLAR — puanlama, admin ve maçlar burada
-   ============================================================ */
+/* ===== AYARLAR (puanlama burada) ===== */
 const CONFIG = {
-  // Puanlama (istediğin gibi değiştir)
-  points: {
-    exactScore: 20,              // tam skoru bilmek
-    correctPenaltyPerGoal: -2,   // sonucu doğru ama skor yanlış: her gol sapması için
-    drawButWinnerPerGoal: -5,    // maç berabere bitti, sen "biri kazanır" dedin
-    winnerButDrawPerGoal: -7     // maç kazananlı bitti, sen "berabere" dedin
-    // ters takımı galip gösterdin = 0
-  },
-  oddsMultiplier: 3,          // oran bonusu = oran × bu  (sadece sonucu doğru bilene)
-  // Sonuç girebilecek yöneticiler (büyük/küçük harf önemsiz)
+  points: { exactScore: 20, correctPenaltyPerGoal: -2, drawButWinnerPerGoal: -5, winnerButDrawPerGoal: -7 },
+  // DOĞRU tahminde taban (20 − ceza×sapma) o sonucun ORANIYLA çarpılır
   admins: ["Meriç"],
 };
+let matches = []; // Firestore "matches" koleksiyonundan doldurulur (api/sync.js yazar)
 
-// Maç fikstürü + referans oranlar.
-// (Sonra The Odds API'den otomatik çekebiliriz; şimdilik elle.)
-const matches = [
-  { id:"m1", group:"A Grubu", home:"Meksika", hf:"🇲🇽", away:"Polonya", af:"🇵🇱",
-    datetime:"2026-06-11T20:00:00", odds:{h:"1.95",d:"3.40",a:"3.80"} },
-  { id:"m2", group:"B Grubu", home:"İspanya", hf:"🇪🇸", away:"Fas", af:"🇲🇦",
-    datetime:"2026-06-12T18:00:00", odds:{h:"1.55",d:"4.00",a:"6.00"} },
-  { id:"m3", group:"C Grubu", home:"Arjantin", hf:"🇦🇷", away:"Hırvatistan", af:"🇭🇷",
-    datetime:"2026-06-13T21:00:00", odds:{h:"1.80",d:"3.50",a:"4.20"} },
-  { id:"m4", group:"D Grubu", home:"Fransa", hf:"🇫🇷", away:"Senegal", af:"🇸🇳",
-    datetime:"2026-06-15T20:00:00", odds:{h:"1.40",d:"4.50",a:"7.50"} },
-  { id:"m5", group:"E Grubu", home:"Almanya", hf:"🇩🇪", away:"Japonya", af:"🇯🇵",
-    datetime:"2026-06-16T18:00:00", odds:{h:"1.75",d:"3.70",a:"4.40"} },
-  { id:"m6", group:"F Grubu", home:"Brezilya", hf:"🇧🇷", away:"Portekiz", af:"🇵🇹",
-    datetime:"2026-06-17T21:00:00", odds:{h:"2.30",d:"3.30",a:"3.00"} },
-];
-
-/* ============================================================
-   3) DURUM
-   ============================================================ */
+/* ===== DURUM ===== */
+const $ = id => document.getElementById(id);
 let me = localStorage.getItem("dk_user") || "";
-let predictionsAll = {};  // { userName: {name, preds:{matchId:{h,a}}} }
-let resultsAll = {};      // { matchId: {h,a} }
+let predictionsAll = {}, resultsAll = {}, usersAll = {};
 const isAdmin = () => CONFIG.admins.some(a => a.toLocaleLowerCase("tr")===me.toLocaleLowerCase("tr"));
-
-function myPreds(){ return (predictionsAll[me] && predictionsAll[me].preds) || {}; }
-function statusOf(m){
-  if(resultsAll[m.id]) return "done";
-  if(new Date() >= new Date(m.datetime)) return "live";
-  return "open";
-}
-function fmtDate(iso){
-  const d=new Date(iso);
-  return d.toLocaleDateString("tr-TR",{day:"numeric",month:"long",weekday:"short"})+" · "+
-         d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"});
-}
-const isExact = (pred,res) => !!pred && !!res && pred.h===res.h && pred.a===res.a;
-// 1 = ev kazandı, 0 = berabere, -1 = deplasman
+const myPreds = () => (predictionsAll[me] && predictionsAll[me].preds) || {};
+const fmt = n => Math.round(n*100)/100;
 const outcome = (h,a) => Math.sign(h-a);
-// tahmin edilen/gerçekleşen sonucun oranı (sonuç doğruysa ikisi aynı)
-function oddsFor(m,oc){ const o=m.odds; return parseFloat(oc>0?o.h : oc<0?o.a : o.d); }
+const isExact = (p,r) => !!p && !!r && p.h===r.h && p.a===r.a;
+const oddsFor = (m,oc) => m && m.odds ? parseFloat(oc>0?m.odds.h : oc<0?m.odds.a : m.odds.d) : 1;
+function statusOf(m){ if(resultsAll[m.id]) return "done"; if(new Date()>=new Date(m.datetime)) return "live"; return "open"; }
+function fmtDate(iso){ const d=new Date(iso); return d.toLocaleDateString("tr-TR",{day:"numeric",month:"long",weekday:"short"})+" · "+d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}); }
 
 function calcPoints(pred,res,m){
   if(!pred||!res) return null;
   const ro=outcome(res.h,res.a), po=outcome(pred.h,pred.a);
   const dev=Math.abs(pred.h-res.h)+Math.abs(pred.a-res.a);
-  // Tam skor: +20 + oran bonusu
-  if(isExact(pred,res)) return CONFIG.points.exactScore + oddsBonus(m,ro);
-  // Sonucu doğru (1/X/2), skor yanlış: -2/sapma + oran bonusu
-  if(po===ro) return CONFIG.points.correctPenaltyPerGoal*dev + oddsBonus(m,ro);
-  // Maç berabere bitti, sen "biri kazanır" dedin: -5/sapma
+  const odd=m?oddsFor(m,ro):1;
+  if(isExact(pred,res)) return CONFIG.points.exactScore * odd;
+  if(po===ro) return (CONFIG.points.exactScore + CONFIG.points.correctPenaltyPerGoal*dev) * odd;
   if(ro===0) return CONFIG.points.drawButWinnerPerGoal*dev;
-  // Maç kazananlı bitti, sen "berabere" dedin: -7/sapma
   if(po===0) return CONFIG.points.winnerButDrawPerGoal*dev;
-  // Ters takımı galip gösterdin: 0
   return 0;
 }
-function oddsBonus(m,oc){ return m ? oddsFor(m,oc)*CONFIG.oddsMultiplier : 0; }
-const fmt = n => Math.round(n*100)/100;
 const ptsClass = p => p>=CONFIG.points.exactScore?"p5":p>0?"p3":p<0?"pneg":"p0";
 
-/* ============================================================
-   4) GİRİŞ
-   ============================================================ */
-const $ = id => document.getElementById(id);
-function start(){
-  $("login").classList.add("hidden");
-  $("app").classList.remove("hidden");
-  $("meName").textContent = me;
-  subscribe();
-  renderAll();
+/* ===== KAYIT / GİRİŞ ===== */
+async function sha256(s){ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+let authMode="login";
+document.querySelectorAll(".seg-btn").forEach(b=>b.onclick=()=>{
+  authMode=b.dataset.mode;
+  document.querySelectorAll(".seg-btn").forEach(x=>x.classList.toggle("active",x===b));
+  $("authBtn").textContent = authMode==="login"?"Giriş Yap":"Hesap Oluştur";
+  $("authErr").textContent="";
+});
+$("authBtn").onclick = doAuth;
+$("authPass").addEventListener("keydown",e=>{ if(e.key==="Enter") doAuth(); });
+async function doAuth(){
+  const name=$("authName").value.trim(), pass=$("authPass").value;
+  $("authErr").textContent="";
+  if(name.length<2){ $("authErr").textContent="Adın en az 2 karakter olmalı."; return; }
+  if(pass.length<3){ $("authErr").textContent="Şifre en az 3 karakter olmalı."; return; }
+  $("authBtn").disabled=true;
+  try{
+    const ref=doc(db,"users",name), snap=await getDoc(ref);
+    const hash=await sha256(name+":"+pass);
+    if(authMode==="register"){
+      if(snap.exists()){ $("authErr").textContent="Bu isim alınmış, giriş yapmayı dene."; return; }
+      await setDoc(ref,{name,pass:hash,createdAt:Date.now()});
+      loginOk(name);
+    } else {
+      if(!snap.exists()){ $("authErr").textContent="Böyle bir kullanıcı yok, kayıt ol."; return; }
+      if(snap.data().pass!==hash){ $("authErr").textContent="Şifre yanlış."; return; }
+      loginOk(name);
+    }
+  }catch(e){ $("authErr").textContent="Bağlantı hatası, tekrar dene."; console.error(e); }
+  finally{ $("authBtn").disabled=false; }
 }
-$("loginBtn").onclick = ()=>{
-  const v=$("nameInput").value.trim();
-  if(!v){ $("nameInput").focus(); return; }
-  me=v; localStorage.setItem("dk_user",me); start();
-};
-$("nameInput").addEventListener("keydown",e=>{ if(e.key==="Enter") $("loginBtn").click(); });
+function loginOk(name){ me=name; localStorage.setItem("dk_user",name); start(); }
 $("logoutBtn").onclick = ()=>{ localStorage.removeItem("dk_user"); location.reload(); };
 
-/* ============================================================
-   5) CANLI SENKRON (Firestore)
-   ============================================================ */
+function start(){
+  $("auth").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("meAva").textContent = me[0].toUpperCase();
+  subscribe(); renderAll();
+}
+
+/* ===== SENKRON ===== */
 function subscribe(){
-  onSnapshot(collection(db,"predictions"), snap=>{
-    predictionsAll={}; snap.forEach(d=>predictionsAll[d.id]=d.data());
-    setSync(true); renderMatches(); renderBoard();
-  }, err=>{ setSync(false); console.error(err); });
-
-  onSnapshot(collection(db,"results"), snap=>{
-    resultsAll={}; snap.forEach(d=>resultsAll[d.id]=d.data());
-    renderMatches(); renderBoard();
-  }, err=>console.error(err));
+  onSnapshot(collection(db,"predictions"), s=>{ predictionsAll={}; s.forEach(d=>predictionsAll[d.id]=d.data()); setSync(true); renderMatches(); renderBoard(); }, e=>{setSync(false);console.error(e);});
+  onSnapshot(collection(db,"results"), s=>{ resultsAll={}; s.forEach(d=>resultsAll[d.id]=d.data()); renderMatches(); renderBoard(); }, e=>console.error(e));
+  onSnapshot(collection(db,"users"), s=>{ usersAll={}; s.forEach(d=>usersAll[d.id]=d.data()); renderBoard(); }, e=>console.error(e));
+  onSnapshot(collection(db,"matches"), s=>{ matches = s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>new Date(x.datetime)-new Date(y.datetime)); renderMatches(); renderBoard(); }, e=>console.error(e));
 }
-function setSync(ok){
-  const s=$("sync");
-  s.classList.toggle("off",!ok);
-  s.innerHTML=`<span class="dot"></span> ${ok?"canlı · senkron":"bağlantı yok"}`;
-}
+function setSync(ok){ const s=$("sync"); s.classList.toggle("off",!ok); s.innerHTML=`<span class="dot"></span> ${ok?"canlı · senkron":"bağlantı yok"}`; }
 
-/* ============================================================
-   6) SEKMELER
-   ============================================================ */
+/* ===== SEKMELER ===== */
 document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>showTab(t.dataset.v));
 function showTab(v){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.v===v));
@@ -309,165 +305,131 @@ function showTab(v){
 }
 function renderAll(){ renderMatches(); renderBoard(); renderRules(); }
 
-/* ============================================================
-   7) MAÇLAR
-   ============================================================ */
+/* ===== MAÇLAR ===== */
 function renderMatches(){
   if($("app").classList.contains("hidden")) return;
-  let html=`<div class="sectitle">Maçlar</div><p>Skor tahminini gir, kaydet. Maç başlayınca tahminler kilitlenir ve herkese açılır.</p>`;
+  let html=`<div class="sectitle">Maçlar</div><p>Skor tahminini gir. Maç başlayınca kilitlenir ve herkesin tahmini açılır.</p>`;
+  if(!matches.length){ $("view-matches").innerHTML=html+`<div class="card" style="text-align:center;color:var(--muted)">Maçlar yükleniyor… (yönetici oranları henüz çekmediyse birazdan gelir)</div>`; return; }
   matches.forEach(m=>{
     const st=statusOf(m), mine=myPreds()[m.id], res=resultsAll[m.id];
-    const pill = st==="open"?`<span class="status-pill s-open">Açık</span>`
-               : st==="live"?`<span class="status-pill s-live">● Kilitli</span>`
-               : `<span class="status-pill s-done">Bitti</span>`;
+    const pill = st==="open"?`<span class="status-pill s-open">Açık</span>`: st==="live"?`<span class="status-pill s-live">● Kilitli</span>`:`<span class="status-pill s-done">Bitti</span>`;
     let mid;
     if(st==="open"){
-      mid=`<div class="pred-inputs">
-        <input type="number" min="0" id="h_${m.id}" value="${mine?mine.h:''}" inputmode="numeric">
-        <span>-</span>
-        <input type="number" min="0" id="a_${m.id}" value="${mine?mine.a:''}" inputmode="numeric"></div>`;
+      mid=`<div class="pred-inputs"><input type="number" min="0" id="h_${m.id}" value="${mine?mine.h:''}" inputmode="numeric"><span>-</span><input type="number" min="0" id="a_${m.id}" value="${mine?mine.a:''}" inputmode="numeric"></div>`;
     } else {
       const sc = res?`${res.h} - ${res.a}`:(mine?`${mine.h} - ${mine.a}`:"– - –");
       mid=`<div class="finalscore">${sc}<small>${res?"Sonuç":"Tahminin"}</small></div>`;
     }
     let action;
     if(st==="open"){
-      action=`<div class="saverow">
-        <button class="btn" data-save="${m.id}">${mine?"Güncelle":"Kaydet"}</button>
-        ${mine?`<span class="saved-note">✓ Kayıtlı</span>`:""}</div>`;
-    } else {
-      action=renderOthers(m)+adminResultBox(m);
-    }
-    html+=`<div class="card">
-      <div class="mtop"><span class="grp">${m.group}</span>${pill}</div>
+      action=`<div class="saverow"><button class="btn-grad" data-save="${m.id}">${mine?"Güncelle":"Kaydet"}</button>${mine?`<span class="saved-note">✓ Kayıtlı</span>`:""}</div>`;
+    } else { action=renderOthers(m)+adminResultBox(m); }
+    html+=`<div class="card"><div class="mtop"><span class="grp">${m.group}</span>${pill}</div>
       <div class="teams">
         <div class="team"><div class="flag">${m.hf}</div><div class="name">${m.home}</div></div>
         <div class="mid">${mid}</div>
         <div class="team"><div class="flag">${m.af}</div><div class="name">${m.away}</div></div>
       </div>
       <div class="odds">
-        <div class="odd"><div class="lab">1 ${m.home}</div><div class="val">${m.odds.h}</div></div>
-        <div class="odd"><div class="lab">X Berabere</div><div class="val">${m.odds.d}</div></div>
-        <div class="odd"><div class="lab">2 ${m.away}</div><div class="val">${m.odds.a}</div></div>
+        <div class="odd"><div class="lab">1 ${m.home}</div><div class="val">${(m.odds||{}).h||'-'}</div></div>
+        <div class="odd"><div class="lab">X Berabere</div><div class="val">${(m.odds||{}).d||'-'}</div></div>
+        <div class="odd"><div class="lab">2 ${m.away}</div><div class="val">${(m.odds||{}).a||'-'}</div></div>
       </div>
       ${st==="open"?`<div class="lock-note">🔒 ${fmtDate(m.datetime)} — başlayınca kilitlenir</div>`:""}
-      ${action}
-    </div>`;
+      ${action}</div>`;
   });
   $("view-matches").innerHTML=html;
   document.querySelectorAll("[data-save]").forEach(b=>b.onclick=()=>save(b.dataset.save));
   document.querySelectorAll("[data-result]").forEach(b=>b.onclick=()=>saveResult(b.dataset.result));
 }
-
 function renderOthers(m){
   let rows="";
   Object.keys(predictionsAll).sort().forEach(name=>{
     const p=(predictionsAll[name].preds||{})[m.id]; if(!p) return;
     const pts=calcPoints(p,resultsAll[m.id],m);
     const badge=pts===null?"":`<span class="pts ${ptsClass(pts)}">${pts>0?'+':''}${fmt(pts)}</span>`;
-    rows+=`<div class="prow"><div class="who"><div class="ava">${name[0].toUpperCase()}</div>${name===me?"<b>"+name+" (sen)</b>":name}</div>
-      <div><span class="sc">${p.h} - ${p.a}</span>${badge}</div></div>`;
+    rows+=`<div class="prow"><div class="who"><div class="ava-s">${name[0].toUpperCase()}</div>${name===me?"<b>"+name+" (sen)</b>":name}</div><div><span class="sc">${p.h} - ${p.a}</span>${badge}</div></div>`;
   });
   if(!rows) rows=`<div style="font-size:13px;color:var(--muted)">Bu maça tahmin giren olmadı.</div>`;
   const cnt=Object.keys(predictionsAll).filter(n=>(predictionsAll[n].preds||{})[m.id]).length;
   return `<div class="others"><h4><span>Herkesin tahmini</span><span>${cnt} kişi</span></h4>${rows}</div>`;
 }
-
 function adminResultBox(m){
   if(!isAdmin()) return "";
   const r=resultsAll[m.id];
-  return `<div class="admin-box"><div class="lab">🛠️ Yönetici — maç sonucu</div>
-    <div class="admin-row">
-      <input type="number" min="0" id="rh_${m.id}" value="${r?r.h:''}" inputmode="numeric">
-      <span style="color:var(--muted);font-weight:700">-</span>
-      <input type="number" min="0" id="ra_${m.id}" value="${r?r.a:''}" inputmode="numeric">
-      <button class="btn" data-result="${m.id}">${r?"Sonucu güncelle":"Sonucu kaydet"}</button>
-    </div></div>`;
+  return `<div class="admin-box"><div class="lab">🛠️ Yönetici — maç sonucu</div><div class="admin-row"><input type="number" min="0" id="rh_${m.id}" value="${r?r.h:''}" inputmode="numeric"><span style="color:var(--muted);font-weight:800">-</span><input type="number" min="0" id="ra_${m.id}" value="${r?r.a:''}" inputmode="numeric"><button data-result="${m.id}">${r?"Güncelle":"Kaydet"}</button></div></div>`;
 }
-
 async function save(id){
   const h=parseInt($("h_"+id).value), a=parseInt($("a_"+id).value);
   if(isNaN(h)||isNaN(a)){ toast("İki skoru da gir"); return; }
   const preds={...myPreds(), [id]:{h,a}};
-  try{ await setDoc(doc(db,"predictions",me),{name:me,preds},{merge:true}); toast("Tahmin kaydedildi ✓"); }
-  catch(e){ toast("Kaydedilemedi"); console.error(e); }
+  try{ await setDoc(doc(db,"predictions",me),{name:me,preds},{merge:true}); toast("Tahmin kaydedildi ✓"); }catch(e){ toast("Kaydedilemedi"); console.error(e); }
 }
 async function saveResult(id){
   const h=parseInt($("rh_"+id).value), a=parseInt($("ra_"+id).value);
   if(isNaN(h)||isNaN(a)){ toast("İki skoru da gir"); return; }
-  try{ await setDoc(doc(db,"results",id),{h,a}); toast("Sonuç kaydedildi ✓"); }
-  catch(e){ toast("Kaydedilemedi"); console.error(e); }
+  try{ await setDoc(doc(db,"results",id),{h,a}); toast("Sonuç kaydedildi ✓"); }catch(e){ toast("Kaydedilemedi"); console.error(e); }
 }
 
-/* ============================================================
-   8) SIRALAMA
-   ============================================================ */
+/* ===== LİG ===== */
 function renderBoard(){
   if($("app").classList.contains("hidden")) return;
-  const names=new Set(Object.keys(predictionsAll)); names.add(me);
+  const names=new Set([...Object.keys(usersAll),...Object.keys(predictionsAll)]); names.add(me);
   const scores=[...names].map(name=>{
     const preds=(predictionsAll[name]&&predictionsAll[name].preds)||{};
-    let total=0,exact=0,played=0;
-    matches.forEach(m=>{
-      if(!resultsAll[m.id]) return;
-      const pts=calcPoints(preds[m.id],resultsAll[m.id],m);
-      if(pts!=null){ total+=pts; played++; if(isExact(preds[m.id],resultsAll[m.id])) exact++; }
-    });
-    return {name,total,exact,played};
+    let total=0,exact=0;
+    matches.forEach(m=>{ if(!resultsAll[m.id]) return; const pts=calcPoints(preds[m.id],resultsAll[m.id],m); if(pts!=null){ total+=pts; if(isExact(preds[m.id],resultsAll[m.id])) exact++; } });
+    return {name,total:fmt(total),exact};
   }).sort((x,y)=>y.total-x.total||y.exact-x.exact);
 
-  let html=`<div class="sectitle">Sıralama</div><p>Oynanan maçlardan toplanan puanlar.</p><div class="lb-card">`;
+  let html=`<div class="sectitle">Lig Tablosu</div><p>${scores.length} oyuncu · oynanan maçlardan toplanan puanlar.</p>`;
+  const top=scores.slice(0,3);
+  if(top.length===3 && top[0].total!==0){
+    const ord=[top[1],top[0],top[2]], cls=["pod2 pod","pod1 pod","pod3 pod"], rk=["2","1","3"];
+    html+=`<div class="podium">`+ord.map((s,i)=>`<div class="${cls[i]}"><div class="pava">${s.name[0].toUpperCase()}</div><div class="pn">${s.name}</div><div class="pp">${s.total} p</div><div class="bar">${rk[i]}</div></div>`).join("")+`</div>`;
+  }
+  html+=`<div class="lb-card">`;
   scores.forEach((s,i)=>{
-    const rc=i===0?"r1":i===1?"r2":i===2?"r3":"";
     const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1);
-    html+=`<div class="lb-row ${s.name===me?'meRow':''}">
-      <div class="rank ${rc}">${medal}</div>
-      <div class="lb-name"><div class="ava">${s.name[0].toUpperCase()}</div>${s.name}${s.name===me?" (sen)":""}</div>
-      <div class="lb-pts">${fmt(s.total)} <small>p · ${s.exact} tam</small></div></div>`;
+    html+=`<div class="lb-row ${s.name===me?'meRow':''}"><div class="rank">${medal}</div><div class="lb-name"><div class="ava-s">${s.name[0].toUpperCase()}</div>${s.name}${s.name===me?" (sen)":""}</div><div class="lb-pts">${s.total} <small>p · ${s.exact} tam</small></div></div>`;
   });
   html+=`</div>`;
   $("view-board").innerHTML=html;
 }
 
-/* ============================================================
-   9) KURALLAR
-   ============================================================ */
+/* ===== KURALLAR ===== */
 function renderRules(){
-  const p=CONFIG.points, k=CONFIG.oddsMultiplier;
+  const p=CONFIG.points;
   $("view-rules").innerHTML=`
     <div class="sectitle">Puanlama Kuralları</div>
     <div class="card">
-      <div class="rule"><span>🎯 Tam skor</span><span class="pt">+${p.exactScore} + oran×${k}</span></div>
-      <div class="rule"><span>✅ Sonuç doğru, skor yanlış</span><span class="pt">${p.correctPenaltyPerGoal}/sapma + oran×${k}</span></div>
+      <div class="rule"><span>🎯 Tam skor</span><span class="pt">${p.exactScore} × oran</span></div>
+      <div class="rule"><span>✅ Sonuç doğru, skor yanlış</span><span class="pt">(${p.exactScore}${p.correctPenaltyPerGoal}×sapma) × oran</span></div>
       <div class="rule"><span>➖ Berabere bitti, "galip" dedin</span><span class="pt">${p.drawButWinnerPerGoal}/sapma</span></div>
       <div class="rule"><span>➖ Galip çıktı, "berabere" dedin</span><span class="pt">${p.winnerButDrawPerGoal}/sapma</span></div>
       <div class="rule"><span>❌ Ters takıma "galip" dedin</span><span class="pt">0 puan</span></div>
     </div>
-    <div class="card" style="margin-top:6px">
-      <div style="font-size:13px;color:var(--muted);line-height:1.7">
+    <div class="card">
+      <div style="font-size:13px;color:var(--muted);line-height:1.8">
         • <b>Gol sapması</b> = |tahmin_ev−gerçek_ev| + |tahmin_dep−gerçek_dep|.<br>
-        • <b>Oran bonusu</b> = oran × ${k}, yalnızca sonucu (1/X/2) doğru bilene; sürprizi bilmek çok, favoriyi bilmek az kazandırır.<br>
+        • Doğru tahminde önce taban puan (20'den sapma düşülür), sonra <b>o sonucun oranıyla çarpılır</b> — sürprizi bilmek katlanır.<br>
         • <b>Ters takıma galip</b> dersen 0; yanlış beraberlik/galibiyet tahmininde <b>eksi</b> puan.<br>
-        • Tahminler maç <b>başlayınca kilitlenir</b> ve herkese görünür.<br>
-        • Yönetici sonucu girince <b>puanlar otomatik</b> dağılır.
+        • Tahminler maç <b>başlayınca kilitlenir</b> ve herkese görünür.
       </div>
     </div>
-    <div class="card" style="margin-top:6px">
-      <div style="font-size:12px;color:var(--muted);line-height:1.7">
-        <b>Örnek</b> (maç 1-2, deplasman kazandı, oran 6.00):<br>
-        • Tam <b>1-2</b> → 20 + 18 = <b style="color:var(--accent)">+38</b><br>
-        • <b>0-2</b> (sonuç doğru, sapma 1) → −2 + 18 = <b style="color:var(--accent)">+16</b><br>
-        • <b>1-1</b> (berabere dedin, sapma 1) → <b style="color:#ff7b7b">−7</b><br>
-        • <b>2-1</b> (ters galip dedin) → <b>0</b>
+    <div class="card">
+      <div style="font-size:12px;color:var(--muted);line-height:1.8">
+        <b>Örnek</b> (maç 0-2, deplasman kazandı, oran 6.00):<br>
+        • Tam <b>0-2</b> → 20 × 6.00 = <b style="color:var(--g1)">120</b><br>
+        • <b>0-1</b> (doğru, sapma 1) → 18 × 6.00 = <b style="color:var(--g1)">108</b><br>
+        • <b>1-1</b> (berabere dedin, sapma 2) → <b style="color:#ff8a8a">−14</b><br>
+        • <b>2-0</b> (ters galip) → <b>0</b>
       </div>
     </div>`;
 }
 
-/* toast */
-let tT;
-function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove("show"),1800); }
-
-/* başlat */
+/* ===== TOAST + BAŞLAT ===== */
+let tT; function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(tT); tT=setTimeout(()=>t.classList.remove("show"),1800); }
 if(me) start();
 </script>
 </body>

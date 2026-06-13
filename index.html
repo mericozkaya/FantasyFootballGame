@@ -469,7 +469,7 @@ function renderBoard(){
     let total=0,exact=0;
     matches.forEach(m=>{ if(!resultsAll[m.id]) return; const pts=calcPoints(preds[m.id],resultsAll[m.id],m); if(pts!=null){ total+=pts; if(isExact(preds[m.id],resultsAll[m.id])) exact++; } });
     total += groupPointsFor(name) + championPointsFor(name);
-    return {name,total:fmt(total),exact};
+    return {name,total:fmt(total),exact,champion:(groupPredsAll[name]&&groupPredsAll[name].champion)||null};
   }).sort((x,y)=>y.total-x.total||y.exact-x.exact);
 
   let html=`<div class="sectitle">Lig Tablosu</div><p>${scores.length} oyuncu · oynanan maçlardan toplanan puanlar.</p>`;
@@ -481,7 +481,7 @@ function renderBoard(){
   html+=`<div class="lb-card">`;
   scores.forEach((s,i)=>{
     const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1);
-    html+=`<div class="lb-row ${s.name===me?'meRow':''}"><div class="rank">${medal}</div><div class="lb-name"><div class="ava-s">${s.name[0].toUpperCase()}</div>${s.name}${s.name===me?" (sen)":""}</div><div class="lb-pts">${s.total} <small>p · ${s.exact} tam</small></div></div>`;
+    html+=`<div class="lb-row ${s.name===me?'meRow':''}"><div class="rank">${medal}</div><div class="lb-name"><div class="ava-s">${s.name[0].toUpperCase()}</div><div><div>${s.name}${s.name===me?" (sen)":""}</div><div style="font-size:11px;color:var(--muted);font-weight:600;margin-top:1px">${s.champion?`🏆 ${flagOf(s.champion)} ${s.champion}`:"🏆 —"}</div></div></div><div class="lb-pts">${s.total} <small>p · ${s.exact} tam</small></div></div>`;
   });
   html+=`</div>`;
   $("view-board").innerHTML=html;
@@ -534,6 +534,7 @@ const GROUPS = {
   K:[{n:"Portekiz",f:"🇵🇹"},{n:"DR Kongo",f:"🇨🇩"},{n:"Özbekistan",f:"🇺🇿"},{n:"Kolombiya",f:"🇨🇴"}],
   L:[{n:"İngiltere",f:"🏴󠁧󠁢󠁥󠁮󠁧󠁿"},{n:"Hırvatistan",f:"🇭🇷"},{n:"Gana",f:"🇬🇭"},{n:"Panama",f:"🇵🇦"}],
 };
+const flagOf = n => { for(const G in GROUPS){ const t=GROUPS[G].find(x=>x.n===n); if(t) return t.f; } return "⚽"; };
 const GROUP_DEADLINE = new Date("2026-06-27T00:00:00Z"); // grup sıralama tahmini bu ana kadar açık
 const groupRankPts = c => c>=4?20 : c===2?8 : c===1?3 : 0; // 3 imkansız
 
